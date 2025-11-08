@@ -167,7 +167,7 @@ def group_detail(group_id):
     # Get group information
     cursor.execute(
         """
-        SELECT canonical_path, generated_caption, detected_objects_json
+        SELECT canonical_path, generated_caption, detected_objects_json, extracted_tags_json
         FROM image_groups
         WHERE group_id = ?
         """,
@@ -182,7 +182,9 @@ def group_detail(group_id):
     canonical_path = result['canonical_path']
     caption = result['generated_caption']
     objects_json = result['detected_objects_json']
+    tags_json = result['extracted_tags_json']
     objects = json.loads(objects_json)
+    tags = json.loads(tags_json) if tags_json else []
     
     # Get all images in this group
     cursor.execute(
@@ -204,6 +206,7 @@ def group_detail(group_id):
         canonical_path=canonical_path,
         caption=caption,
         objects=objects,
+        tags=tags,
         similar_images=similar_images,
         file_size_mb=file_size_mb
     )
@@ -335,6 +338,132 @@ def object_detail(object_name):
     )
 
 
+@app.route('/persons')
+def persons_index():
+    """
+    Persons index - show all detected persons (v2 feature).
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all persons
+    cursor.execute("""
+        SELECT person_group_id, name, faiss_face_id
+        FROM person_groups
+        ORDER BY person_group_id
+    """)
+    
+    persons = []
+    for row in cursor.fetchall():
+        person_group_id = row['person_group_id']
+        name = row['name']
+        
+        # Count photos containing this person
+        cursor.execute("""
+            SELECT COUNT(DISTINCT i.group_id)
+            FROM images i
+            JOIN image_groups g ON i.group_id = g.group_id
+            WHERE g.detected_objects_json LIKE ?
+        """, (f'%"person_group_id": "{person_group_id}"%',))
+        
+        photo_count = cursor.fetchone()[0]
+        
+        if photo_count > 0:
+            persons.append({
+                'person_group_id': person_group_id,
+                'name': name,
+                'photo_count': photo_count
+            })
+    
+    # Get stats
+    cursor.execute("SELECT COUNT(*) FROM images")
+    total_images = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM person_groups")
+    total_persons = cursor.fetchone()[0]
+    
+    stats = {
+        'total_images': total_images,
+        'total_persons': total_persons
+    }
+    
+    conn.close()
+    
+    return render_template(
+        'persons.html',
+        persons=persons,
+        stats=stats
+    )
+
+
+@app.route('/person/<person_group_id>')
+def person_detail(person_group_id):
+    """
+    Person detail - show all photos containing a specific person (v2 feature).
+    """
+    from urllib.parse import unquote
+    
+    person_group_id = unquote(person_group_id)
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get person info
+    cursor.execute("""
+        SELECT name FROM person_groups WHERE person_group_id = ?
+    """, (person_group_id,))
+    
+    result = cursor.fetchone()
+    if not result:
+        conn.close()
+        abort(404)
+    
+    person_name = result['name']
+    
+    # Get all groups containing this person
+    cursor.execute("""
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json
+        FROM image_groups
+        ORDER BY group_id
+    """)
+    
+    matching_groups = []
+    
+    for row in cursor.fetchall():
+        group_id = row['group_id']
+        canonical_path = row['canonical_path']
+        caption = row['generated_caption']
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        # Check if this person is in the photo
+        for obj in objects:
+            if obj.get('person_group_id') == person_group_id:
+                # Get count of images in this group
+                cursor.execute(
+                    "SELECT COUNT(*) FROM images WHERE group_id = ?",
+                    (group_id,)
+                )
+                image_count = cursor.fetchone()[0]
+                
+                matching_groups.append({
+                    'group_id': group_id,
+                    'canonical_path': canonical_path,
+                    'caption': caption,
+                    'image_count': image_count
+                })
+                break
+    
+    conn.close()
+    
+    return render_template(
+        'person_detail.html',
+        person_group_id=person_group_id,
+        person_name=person_name,
+        groups=matching_groups,
+        total_count=len(matching_groups)
+    )
+
+
 @app.route('/search')
 def search():
     """
@@ -450,6 +579,55 @@ def search():
     
     # Sort objects by count
     object_results = sorted(matching_objects.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    # Search in tags (v2 feature)
+    cursor.execute("""
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json, extracted_tags_json
+        FROM image_groups
+        WHERE extracted_tags_json IS NOT NULL
+    """)
+    
+    for row in cursor.fetchall():
+        group_id = row['group_id']
+        
+        # Skip if already in results
+        if group_id in seen_groups:
+            continue
+            
+        tags_json = row['extracted_tags_json']
+        if not tags_json:
+            continue
+            
+        tags = json.loads(tags_json)
+        
+        # Check if any tag matches the query
+        if any(query.lower() in tag.lower() for tag in tags):
+            canonical_path = row['canonical_path']
+            caption = row['generated_caption']
+            objects_json = row['detected_objects_json']
+            objects = json.loads(objects_json)
+            
+            # Get count of images in this group
+            cursor.execute(
+                "SELECT COUNT(*) FROM images WHERE group_id = ?",
+                (group_id,)
+            )
+            image_count = cursor.fetchone()[0]
+            
+            matching_tags = [t for t in tags if query.lower() in t.lower()]
+            
+            photo_results.append({
+                'group_id': group_id,
+                'canonical_path': canonical_path,
+                'caption': caption,
+                'object_count': len(objects),
+                'image_count': image_count,
+                'match_reason': f'Tag: {matching_tags[0]}'
+            })
+            seen_groups.add(group_id)
+            
+            if len(photo_results) >= 50:
+                break
     
     conn.close()
     

@@ -20,6 +20,7 @@
                 <a href="/">Gallery View</a>
                 <a href="/groups">Grouped View</a>
                 <a href="/objects">Objects View</a>
+                <a href="/persons">Persons View</a>
             </nav>
         </div>
     </header>
@@ -55,6 +56,19 @@
                     </div>
                     {% else %}
                     <p class="no-objects">No objects detected</p>
+                    {% endif %}
+                </div>
+
+                <div class="info-section">
+                    <h3>Extracted Tags ({{ tags|length }})</h3>
+                    {% if tags %}
+                    <div class="tags-container">
+                        {% for tag in tags %}
+                        <span class="tag-chip">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="no-objects">No tags extracted</p>
                     {% endif %}
                 </div>
 

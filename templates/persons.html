@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse by Persons - AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-top">
+                <h1>🖼️ AI Photo Gallery</h1>
+                <form action="/search" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Search photos, objects..." class="search-input" autocomplete="off">
+                    <button type="submit" class="search-button">🔍</button>
+                </form>
+            </div>
+            <nav>
+                <a href="/">Gallery View</a>
+                <a href="/groups">Grouped View</a>
+                <a href="/objects">Objects View</a>
+                <a href="/persons" class="active">Persons View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_images }}</span>
+                <span class="stat-label">Total Images</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_persons }}</span>
+                <span class="stat-label">Detected Persons</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ persons|length }}</span>
+                <span class="stat-label">In Photos</span>
+            </div>
+        </div>
+
+        <div class="page-header">
+            <h2>Browse Photos by Detected Persons</h2>
+            <p>Click on any person to see all photos containing them</p>
+        </div>
+
+        <div class="persons-grid">
+            {% for person in persons %}
+            <a href="/person/{{ person.person_group_id|urlencode }}" class="person-card">
+                <div class="person-icon">👤</div>
+                <div class="person-info">
+                    <h3 class="person-name">{{ person.name }}</h3>
+                    <span class="person-count">{{ person.photo_count }} photo{% if person.photo_count != 1 %}s{% endif %}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if not persons %}
+        <div class="empty-state">
+            <h2>No Persons Detected Yet</h2>
+            <p>Persons will appear here once photos are indexed with face detection.</p>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, Qwen2-VL, and Face Recognition</p>
+        </div>
+    </footer>
+</body>
+</html>
+

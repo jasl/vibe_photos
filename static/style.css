@@ -443,6 +443,83 @@ footer {
     }
 }
 
+/* Tags Styles (v2) */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag-chip {
+    display: inline-block;
+    padding: 0.35rem 0.85rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    font-size: 0.8rem;
+    border-radius: 16px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.tag-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* Persons View Styles (v2) */
+.persons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+}
+
+.person-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.person-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.person-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.person-info {
+    width: 100%;
+}
+
+.person-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.person-count {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
 /* Objects View Styles */
 .page-header {
     text-align: center;
