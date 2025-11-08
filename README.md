@@ -67,29 +67,41 @@ An intelligent photo management system powered by state-of-the-art AI models for
 
 ## Usage
 
-### Step 1: Index Your Photos
+### Step 1: Index Your Photos (V3 Fast Ingest)
 
-Process all photos in the configured directory (`/home/jasl/datasets/my_photos` by default):
+Process all photos with the v3 cascade architecture (5-10x faster):
 
 ```bash
 uv run index_photos.py
 ```
 
-**What happens during indexing:**
+**V3 Fast Ingest Workflow:**
 
 1. Scans the photos directory recursively for images
 2. For each photo:
-   - Creates a 1152-dimension embedding (fingerprint)
-   - Checks for duplicates using FAISS similarity search
-   - If duplicate (similarity > 0.98): Reuses cached AI results
-   - If unique: Runs full AI pipeline (caption + object detection)
-3. Saves results to SQLite database and FAISS index
+   - Extracts EXIF metadata (timestamp, GPS coordinates)
+   - Creates image embedding for visual deduplication
+   - Checks for visual duplicates (similarity > 0.98)
+   - If visually unique: Generates quick BLIP2 caption
+   - Creates caption embedding for semantic deduplication
+   - Checks for semantic duplicates (similarity > 0.95)
+   - If unique: Queues for deep AI processing
+3. Saves results to SQLite database and FAISS indexes
 
-**Expected Runtime:**
+**Expected Runtime (Fast Tier):**
 
-- **30,000 photos**: Several hours (depends on GPU)
-- **Unique photos**: ~5-10 seconds per photo (full AI pipeline)
-- **Duplicate photos**: <1 second per photo (cached results)
+- **30,000 photos**: 1-2 hours (5-10x faster than v2)
+- **Processing speed**: ~5-10 images/second
+- **VRAM usage**: ~12GB (lightweight models)
+
+**For V2 Full Processing (Slower but Complete):**
+
+If you need immediate full processing without the queue:
+```bash
+uv run index_photos_v2_backup.py
+```
+
+This runs the complete AI pipeline immediately (~1-2 img/s)
 
 **Progress tracking:**
 
@@ -97,6 +109,18 @@ uv run index_photos.py
 - Saves every 100 images (safe to interrupt with Ctrl+C)
 - Resume by re-running the script (skips already processed photos)
 - Logs are stored in the `logs/` directory
+
+**Check Queue Status:**
+
+After fast ingest, check how many photos are queued for deep processing:
+
+```bash
+uv run check_queue.py
+```
+
+**Deep Processing (Future):**
+
+Photos are queued with fast captions and EXIF data. Deep processing with Qwen2-VL, face recognition, and tag extraction will be added in a future update. The current web UI works with fast captions.
 
 ### Step 2: Browse with Web UI
 
