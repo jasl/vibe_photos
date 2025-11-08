@@ -152,12 +152,17 @@ ai_photos_management/
 ├── templates/            # HTML templates
 │   ├── index.html        # Gallery view
 │   ├── groups.html       # Grouped view
-│   └── group_detail.html # Detail view
+│   ├── objects.html      # Objects view
+│   ├── object_detail.html # Object detail page
+│   ├── group_detail.html # Detail view
+│   └── search_results.html # Search results
 ├── static/
 │   └── style.css         # Styling
 ├── data/                 # Generated data (gitignored)
 │   ├── photo_library.index  # FAISS vector index
 │   └── photo_metadata.db    # SQLite database
+├── logs/                 # Application logs (gitignored)
+├── LICENSE               # AGPL-3.0 license
 └── README.md
 ```
 
