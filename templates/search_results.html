@@ -34,22 +34,22 @@
         </div>
 
         {% if total_photos > 0 or total_objects > 0 %}
-        <div class="tabs-container">
-            <input type="radio" name="search-tabs" id="tab-photos" class="tab-input" checked>
-            <input type="radio" name="search-tabs" id="tab-objects" class="tab-input">
+        <div class="pills-container">
+            <input type="radio" name="search-pills" id="pill-photos" class="pill-input" checked>
+            <input type="radio" name="search-pills" id="pill-objects" class="pill-input">
             
-            <div class="tab-headers">
-                <label for="tab-photos" class="tab-header">
+            <div class="pills-nav">
+                <label for="pill-photos" class="pill-button">
                     <span>Photos</span>
-                    <span class="tab-count">{{ total_photos }}</span>
+                    <span class="pill-badge">{{ total_photos }}</span>
                 </label>
-                <label for="tab-objects" class="tab-header">
+                <label for="pill-objects" class="pill-button">
                     <span>Objects</span>
-                    <span class="tab-count">{{ total_objects }}</span>
+                    <span class="pill-badge">{{ total_objects }}</span>
                 </label>
             </div>
             
-            <div class="tab-content" id="content-photos">
+            <div class="pill-content" id="content-photos">
                 {% if total_photos > 0 %}
                 <div class="gallery-grid">
                     {% for photo in photo_results %}
@@ -75,13 +75,13 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="tab-empty">
+                <div class="pill-empty">
                     <p>No photos found matching "{{ query }}"</p>
                 </div>
                 {% endif %}
             </div>
             
-            <div class="tab-content" id="content-objects">
+            <div class="pill-content" id="content-objects">
                 {% if total_objects > 0 %}
                 <div class="object-chips-container">
                     {% for object_name, count in object_results %}
@@ -92,7 +92,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="tab-empty">
+                <div class="pill-empty">
                     <p>No objects found matching "{{ query }}"</p>
                 </div>
                 {% endif %}
