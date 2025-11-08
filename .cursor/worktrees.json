@@ -1,0 +1,9 @@
+{
+  "setup-worktree": [
+    "uv venv --python 3.12 --seed"
+  ],
+  "install-dependencies": [
+    "source .venv/bin/activate",
+    "pip install -r requirements.txt"
+  ]
+}
