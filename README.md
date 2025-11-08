@@ -96,6 +96,7 @@ uv run index_photos.py
 - Real-time progress bar with tqdm
 - Saves every 100 images (safe to interrupt with Ctrl+C)
 - Resume by re-running the script (skips already processed photos)
+- Logs are stored in the `logs/` directory
 
 ### Step 2: Browse with Web UI
 
