@@ -84,9 +84,9 @@ class ImageProcessor:
             pos_results = self.models.pos_tagger(caption)
             
             # Extract nouns and proper nouns
+            # The model outputs Universal Dependencies tags: 'NOUN', 'PROPN'
             for entity in pos_results:
-                # Looking for noun tags: NN (noun), NNS (plural noun), NNP (proper noun)
-                if entity['entity'] in ['B-NN', 'I-NN', 'B-NNS', 'I-NNS', 'B-NNP', 'I-NNP']:
+                if entity['entity'] in ['NOUN', 'PROPN']:
                     tag = entity['word'].replace("##", "").strip()
                     if tag and len(tag) > 1:  # Filter out single characters
                         tags_list.append(tag.lower())

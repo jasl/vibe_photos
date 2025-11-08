@@ -111,10 +111,21 @@ def run_semantic_merge_task():
         db_conn.close()
         return
         
-    group_ids = [row[0] for row in rows]
-    captions = [row[1] for row in rows]
+    group_ids = []
+    captions = []
     
-    print(f"\nFound {len(captions)} unique image groups")
+    # Filter out None captions
+    for row in rows:
+        if row[1] is not None and row[1].strip():
+            group_ids.append(row[0])
+            captions.append(row[1])
+    
+    if len(captions) < 2:
+        print("\nNot enough valid groups to merge. Exiting.")
+        db_conn.close()
+        return
+    
+    print(f"\nFound {len(captions)} unique image groups with valid captions")
     print(f"Creating text embeddings for all captions...")
     
     # Load embedding model
@@ -155,6 +166,10 @@ def run_semantic_merge_task():
         for j in range(1, k):
             neighbor_index = all_indices[i][j]
             neighbor_score = all_scores[i][j]
+            
+            # Skip invalid FAISS results (padded with -1 when k > number of vectors)
+            if neighbor_index < 0 or neighbor_index >= len(group_ids):
+                continue
             
             secondary_group_id = group_ids[neighbor_index]
             
