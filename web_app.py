@@ -335,6 +335,134 @@ def object_detail(object_name):
     )
 
 
+@app.route('/search')
+def search():
+    """
+    Search across photos by captions, objects, and file paths.
+    Returns results grouped by type.
+    """
+    from flask import request
+    
+    query = request.args.get('q', '').strip()
+    
+    if not query:
+        # Redirect to gallery if no query
+        from flask import redirect, url_for
+        return redirect(url_for('gallery'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Search in captions
+    cursor.execute("""
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json
+        FROM image_groups
+        WHERE LOWER(generated_caption) LIKE LOWER(?)
+        LIMIT 50
+    """, (f'%{query}%',))
+    
+    photo_results = []
+    for row in cursor.fetchall():
+        group_id = row['group_id']
+        canonical_path = row['canonical_path']
+        caption = row['generated_caption']
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        # Get count of images in this group
+        cursor.execute(
+            "SELECT COUNT(*) FROM images WHERE group_id = ?",
+            (group_id,)
+        )
+        image_count = cursor.fetchone()[0]
+        
+        photo_results.append({
+            'group_id': group_id,
+            'canonical_path': canonical_path,
+            'caption': caption,
+            'object_count': len(objects),
+            'image_count': image_count,
+            'match_reason': 'Caption'
+        })
+    
+    # Search in detected objects
+    cursor.execute("""
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json
+        FROM image_groups
+        WHERE LOWER(detected_objects_json) LIKE LOWER(?)
+        LIMIT 50
+    """, (f'%"{query}%',))
+    
+    # Track group IDs we've already added to avoid duplicates
+    seen_groups = {p['group_id'] for p in photo_results}
+    
+    for row in cursor.fetchall():
+        group_id = row['group_id']
+        
+        # Skip if already in results from caption search
+        if group_id in seen_groups:
+            continue
+            
+        canonical_path = row['canonical_path']
+        caption = row['generated_caption']
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        # Verify the object actually contains the search term
+        matching_objects = [obj for obj in objects if query.lower() in obj['label'].lower()]
+        if not matching_objects:
+            continue
+        
+        # Get count of images in this group
+        cursor.execute(
+            "SELECT COUNT(*) FROM images WHERE group_id = ?",
+            (group_id,)
+        )
+        image_count = cursor.fetchone()[0]
+        
+        photo_results.append({
+            'group_id': group_id,
+            'canonical_path': canonical_path,
+            'caption': caption,
+            'object_count': len(objects),
+            'image_count': image_count,
+            'match_reason': f'Object: {matching_objects[0]["label"]}'
+        })
+        seen_groups.add(group_id)
+    
+    # Find matching object names for the objects section
+    cursor.execute("""
+        SELECT detected_objects_json
+        FROM image_groups
+    """)
+    
+    matching_objects = {}
+    for row in cursor.fetchall():
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        for obj in objects:
+            label = obj['label']
+            if query.lower() in label.lower():
+                if label not in matching_objects:
+                    matching_objects[label] = 0
+                matching_objects[label] += 1
+    
+    # Sort objects by count
+    object_results = sorted(matching_objects.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    conn.close()
+    
+    return render_template(
+        'search_results.html',
+        query=query,
+        photo_results=photo_results,
+        object_results=object_results,
+        total_photos=len(photo_results),
+        total_objects=len(object_results)
+    )
+
+
 @app.route('/photos/<path:filepath>')
 def serve_photo(filepath):
     """

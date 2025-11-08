@@ -9,7 +9,13 @@
 <body>
     <header>
         <div class="container">
-            <h1>🖼️ AI Photo Gallery</h1>
+            <div class="header-top">
+                <h1>🖼️ AI Photo Gallery</h1>
+                <form action="/search" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Search photos, objects..." class="search-input" autocomplete="off">
+                    <button type="submit" class="search-button">🔍</button>
+                </form>
+            </div>
             <nav>
                 <a href="/" class="active">Gallery View</a>
                 <a href="/groups">Grouped View</a>

@@ -568,6 +568,283 @@ footer {
     background: var(--secondary-color);
 }
 
+/* Tab Styles */
+.tabs-container {
+    margin-top: 2rem;
+}
+
+.tab-input {
+    display: none;
+}
+
+.tab-headers {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 2rem;
+}
+
+.tab-header {
+    flex: 1;
+    max-width: 200px;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    text-align: center;
+    background: var(--surface);
+    border: 2px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.3s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    position: relative;
+    bottom: -2px;
+}
+
+.tab-header:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+.tab-count {
+    background: var(--hover-bg);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+#tab-photos:checked ~ .tab-headers label[for="tab-photos"],
+#tab-objects:checked ~ .tab-headers label[for="tab-objects"] {
+    background: var(--surface);
+    border-bottom-color: var(--surface);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+#tab-photos:checked ~ .tab-headers label[for="tab-photos"] .tab-count,
+#tab-objects:checked ~ .tab-headers label[for="tab-objects"] .tab-count {
+    background: var(--primary-color);
+    color: white;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#tab-photos:checked ~ #content-photos,
+#tab-objects:checked ~ #content-objects {
+    display: block;
+}
+
+.tab-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* Search Styles */
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.search-form {
+    display: flex;
+    gap: 0.5rem;
+    flex: 0 1 400px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 24px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.search-button {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.search-button:hover {
+    background: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+/* Search Results Page */
+.search-header {
+    text-align: center;
+    margin: 2rem 0 3rem;
+}
+
+.search-header h2 {
+    font-size: 1.75rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.search-stats {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.search-section {
+    margin-bottom: 3rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.match-badge {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: rgba(124, 58, 237, 0.9);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Object Chips */
+.object-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.object-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border: 2px solid var(--border-color);
+    border-radius: 24px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.object-chip:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.chip-name {
+    font-weight: 500;
+}
+
+.chip-count {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Empty State Links */
+.empty-state-links {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.empty-link {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.empty-link:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .header-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .search-form {
+        flex: 1;
+        max-width: 100%;
+    }
+    
+    .tab-headers {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .tab-header {
+        max-width: 100%;
+        border-radius: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tab-header:first-child {
+        border-radius: 8px 8px 0 0;
+    }
+    
+    #tab-photos:checked ~ .tab-headers label[for="tab-photos"],
+    #tab-objects:checked ~ .tab-headers label[for="tab-objects"] {
+        border-left-color: var(--primary-color);
+        border-left-width: 4px;
+    }
+}
+
 @media (max-width: 480px) {
     .gallery-grid {
         grid-template-columns: 1fr;
@@ -579,5 +856,17 @@ footer {
     
     .objects-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .empty-state-links {
+        flex-direction: column;
+    }
+    
+    .object-chips-container {
+        flex-direction: column;
+    }
+    
+    .object-chip {
+        justify-content: space-between;
     }
 }

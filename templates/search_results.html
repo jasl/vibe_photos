@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search: {{ query }} - AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-top">
+                <h1>🖼️ AI Photo Gallery</h1>
+                <form action="/search" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Search photos, objects..." class="search-input" autocomplete="off" value="{{ query }}">
+                    <button type="submit" class="search-button">🔍</button>
+                </form>
+            </div>
+            <nav>
+                <a href="/">Gallery View</a>
+                <a href="/groups">Grouped View</a>
+                <a href="/objects">Objects View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="search-header">
+            <h2>Search Results for "{{ query }}"</h2>
+            <p class="search-stats">
+                Found {{ total_photos }} photo{% if total_photos != 1 %}s{% endif %}
+                {% if total_objects > 0 %} and {{ total_objects }} object{% if total_objects != 1 %}s{% endif %}{% endif %}
+            </p>
+        </div>
+
+        {% if total_photos > 0 or total_objects > 0 %}
+        <div class="tabs-container">
+            <input type="radio" name="search-tabs" id="tab-photos" class="tab-input" checked>
+            <input type="radio" name="search-tabs" id="tab-objects" class="tab-input">
+            
+            <div class="tab-headers">
+                <label for="tab-photos" class="tab-header">
+                    <span>Photos</span>
+                    <span class="tab-count">{{ total_photos }}</span>
+                </label>
+                <label for="tab-objects" class="tab-header">
+                    <span>Objects</span>
+                    <span class="tab-count">{{ total_objects }}</span>
+                </label>
+            </div>
+            
+            <div class="tab-content" id="content-photos">
+                {% if total_photos > 0 %}
+                <div class="gallery-grid">
+                    {% for photo in photo_results %}
+                    <div class="photo-card">
+                        <a href="/group/{{ photo.group_id }}">
+                            <div class="photo-container">
+                                <img src="/photo{{ photo.canonical_path }}" 
+                                     alt="{{ photo.caption }}"
+                                     loading="lazy">
+                                <div class="match-badge">{{ photo.match_reason }}</div>
+                            </div>
+                            <div class="photo-info">
+                                <p class="caption">{{ photo.caption }}</p>
+                                <div class="metadata">
+                                    <span class="badge">{{ photo.object_count }} objects</span>
+                                    {% if photo.image_count > 1 %}
+                                    <span class="badge duplicate">{{ photo.image_count }} similar</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="tab-empty">
+                    <p>No photos found matching "{{ query }}"</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="tab-content" id="content-objects">
+                {% if total_objects > 0 %}
+                <div class="object-chips-container">
+                    {% for object_name, count in object_results %}
+                    <a href="/object/{{ object_name|urlencode }}" class="object-chip">
+                        <span class="chip-name">{{ object_name }}</span>
+                        <span class="chip-count">{{ count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="tab-empty">
+                    <p>No objects found matching "{{ query }}"</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if total_photos == 0 and total_objects == 0 %}
+        <div class="empty-state">
+            <h2>No results found for "{{ query }}"</h2>
+            <p>Try different keywords or browse by:</p>
+            <div class="empty-state-links">
+                <a href="/" class="empty-link">All Photos</a>
+                <a href="/objects" class="empty-link">Browse Objects</a>
+                <a href="/groups" class="empty-link">Browse Groups</a>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, and BLIP2</p>
+        </div>
+    </footer>
+</body>
+</html>
+
