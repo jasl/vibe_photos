@@ -13,6 +13,7 @@
             <nav>
                 <a href="/">Gallery View</a>
                 <a href="/groups">Grouped View</a>
+                <a href="/objects">Objects View</a>
             </nav>
         </div>
     </header>
@@ -41,7 +42,7 @@
                     <div class="objects-list">
                         {% for obj in objects %}
                         <div class="object-item">
-                            <span class="object-label">{{ obj.label }}</span>
+                            <a href="/object/{{ obj.label|urlencode }}" class="object-label clickable">{{ obj.label }}</a>
                             <span class="object-confidence">{{ "%.1f"|format(obj.score * 100) }}%</span>
                         </div>
                         {% endfor %}

@@ -209,6 +209,132 @@ def group_detail(group_id):
     )
 
 
+def get_all_objects():
+    """
+    Extract all unique objects from the database with their photo counts.
+    Returns a dictionary mapping object names to photo counts, sorted by frequency.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all detected objects JSON
+    cursor.execute("SELECT detected_objects_json FROM image_groups")
+    
+    object_counts = defaultdict(int)
+    
+    for row in cursor.fetchall():
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        # Count each unique object
+        seen_in_this_photo = set()
+        for obj in objects:
+            label = obj['label']
+            if label not in seen_in_this_photo:
+                object_counts[label] += 1
+                seen_in_this_photo.add(label)
+    
+    conn.close()
+    
+    # Sort by frequency (most common first)
+    sorted_objects = sorted(object_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    return sorted_objects
+
+
+@app.route('/objects')
+def objects_index():
+    """
+    Objects index - show all detected objects with photo counts.
+    """
+    all_objects = get_all_objects()
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get stats
+    cursor.execute("SELECT COUNT(*) FROM images")
+    total_images = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM image_groups")
+    unique_groups = cursor.fetchone()[0]
+    
+    stats = {
+        'total_images': total_images,
+        'unique_groups': unique_groups,
+        'duplicate_images': total_images - unique_groups,
+        'total_objects': len(all_objects)
+    }
+    
+    conn.close()
+    
+    return render_template(
+        'objects.html',
+        objects=all_objects,
+        stats=stats
+    )
+
+
+@app.route('/object/<object_name>')
+def object_detail(object_name):
+    """
+    Object detail - show all photos containing a specific object.
+    """
+    from urllib.parse import unquote
+    
+    # URL decode the object name
+    object_name = unquote(object_name)
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all groups containing this object
+    cursor.execute("""
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json
+        FROM image_groups
+        ORDER BY group_id
+    """)
+    
+    matching_groups = []
+    
+    for row in cursor.fetchall():
+        group_id = row['group_id']
+        canonical_path = row['canonical_path']
+        caption = row['generated_caption']
+        objects_json = row['detected_objects_json']
+        objects = json.loads(objects_json)
+        
+        # Check if this object is in the photo
+        for obj in objects:
+            if obj['label'] == object_name:
+                # Get count of images in this group
+                cursor.execute(
+                    "SELECT COUNT(*) FROM images WHERE group_id = ?",
+                    (group_id,)
+                )
+                image_count = cursor.fetchone()[0]
+                
+                matching_groups.append({
+                    'group_id': group_id,
+                    'canonical_path': canonical_path,
+                    'caption': caption,
+                    'confidence': obj['score'],
+                    'image_count': image_count
+                })
+                break
+    
+    conn.close()
+    
+    if not matching_groups:
+        abort(404)
+    
+    return render_template(
+        'object_detail.html',
+        object_name=object_name,
+        groups=matching_groups,
+        total_count=len(matching_groups)
+    )
+
+
 @app.route('/photos/<path:filepath>')
 def serve_photo(filepath):
     """

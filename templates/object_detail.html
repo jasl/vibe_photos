@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Photo Gallery</title>
+    <title>{{ object_name }} - AI Photo Gallery</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -11,27 +11,21 @@
         <div class="container">
             <h1>🖼️ AI Photo Gallery</h1>
             <nav>
-                <a href="/" class="active">Gallery View</a>
+                <a href="/">Gallery View</a>
                 <a href="/groups">Grouped View</a>
-                <a href="/objects">Objects View</a>
+                <a href="/objects" class="active">Objects View</a>
             </nav>
         </div>
     </header>
 
     <main class="container">
-        <div class="stats-bar">
-            <div class="stat">
-                <span class="stat-value">{{ stats.total_images }}</span>
-                <span class="stat-label">Total Images</span>
-            </div>
-            <div class="stat">
-                <span class="stat-value">{{ stats.unique_groups }}</span>
-                <span class="stat-label">Unique Groups</span>
-            </div>
-            <div class="stat">
-                <span class="stat-value">{{ stats.duplicate_images }}</span>
-                <span class="stat-label">Duplicates</span>
-            </div>
+        <div class="breadcrumb">
+            <a href="/">Gallery</a> / <a href="/objects">Objects</a> / <span>{{ object_name }}</span>
+        </div>
+
+        <div class="object-detail-header">
+            <h2>Photos containing: {{ object_name }}</h2>
+            <p class="object-stats">{{ total_count }} photo{% if total_count != 1 %}s{% endif %} found</p>
         </div>
 
         <div class="gallery-grid">
@@ -42,11 +36,13 @@
                         <img src="/photo{{ group.canonical_path }}" 
                              alt="{{ group.caption }}"
                              loading="lazy">
+                        <div class="confidence-badge">
+                            {{ "%.0f"|format(group.confidence * 100) }}% confident
+                        </div>
                     </div>
                     <div class="photo-info">
                         <p class="caption">{{ group.caption }}</p>
                         <div class="metadata">
-                            <span class="badge">{{ group.object_count }} objects</span>
                             {% if group.image_count > 1 %}
                             <span class="badge duplicate">{{ group.image_count }} similar</span>
                             {% endif %}
@@ -59,8 +55,9 @@
 
         {% if not groups %}
         <div class="empty-state">
-            <h2>No Photos Indexed Yet</h2>
-            <p>Run <code>uv run index_photos.py</code> to index your photos.</p>
+            <h2>No Photos Found</h2>
+            <p>No photos contain the object "{{ object_name }}".</p>
+            <a href="/objects" class="back-link">← Back to Objects</a>
         </div>
         {% endif %}
     </main>
@@ -72,3 +69,4 @@
     </footer>
 </body>
 </html>
+

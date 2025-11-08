@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse by Objects - AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🖼️ AI Photo Gallery</h1>
+            <nav>
+                <a href="/">Gallery View</a>
+                <a href="/groups">Grouped View</a>
+                <a href="/objects" class="active">Objects View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_images }}</span>
+                <span class="stat-label">Total Images</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_objects }}</span>
+                <span class="stat-label">Detected Objects</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.unique_groups }}</span>
+                <span class="stat-label">Unique Groups</span>
+            </div>
+        </div>
+
+        <div class="page-header">
+            <h2>Browse Photos by Detected Objects</h2>
+            <p>Click on any object to see all photos containing it</p>
+        </div>
+
+        <div class="objects-grid">
+            {% for object_name, count in objects %}
+            <a href="/object/{{ object_name|urlencode }}" class="object-card">
+                <div class="object-icon">
+                    {% if 'person' in object_name.lower() or 'man' in object_name.lower() or 'woman' in object_name.lower() %}
+                        👤
+                    {% elif 'car' in object_name.lower() or 'vehicle' in object_name.lower() %}
+                        🚗
+                    {% elif 'food' in object_name.lower() or 'pizza' in object_name.lower() or 'cake' in object_name.lower() %}
+                        🍕
+                    {% elif 'dog' in object_name.lower() %}
+                        🐕
+                    {% elif 'cat' in object_name.lower() %}
+                        🐈
+                    {% elif 'bird' in object_name.lower() %}
+                        🐦
+                    {% elif 'tree' in object_name.lower() or 'plant' in object_name.lower() %}
+                        🌳
+                    {% elif 'book' in object_name.lower() %}
+                        📚
+                    {% elif 'phone' in object_name.lower() or 'cell' in object_name.lower() %}
+                        📱
+                    {% elif 'computer' in object_name.lower() or 'laptop' in object_name.lower() %}
+                        💻
+                    {% elif 'bottle' in object_name.lower() or 'cup' in object_name.lower() %}
+                        🍶
+                    {% elif 'chair' in object_name.lower() or 'couch' in object_name.lower() %}
+                        🪑
+                    {% elif 'table' in object_name.lower() or 'desk' in object_name.lower() %}
+                        🪑
+                    {% elif 'building' in object_name.lower() or 'house' in object_name.lower() %}
+                        🏢
+                    {% elif 'sky' in object_name.lower() or 'cloud' in object_name.lower() %}
+                        ☁️
+                    {% elif 'water' in object_name.lower() or 'ocean' in object_name.lower() or 'sea' in object_name.lower() %}
+                        🌊
+                    {% else %}
+                        📷
+                    {% endif %}
+                </div>
+                <div class="object-info">
+                    <h3 class="object-name">{{ object_name }}</h3>
+                    <span class="object-count">{{ count }} photo{% if count != 1 %}s{% endif %}</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        {% if not objects %}
+        <div class="empty-state">
+            <h2>No Objects Detected Yet</h2>
+            <p>Objects will appear here once photos are indexed with object detection.</p>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, and BLIP2</p>
+        </div>
+    </footer>
+</body>
+</html>
+
