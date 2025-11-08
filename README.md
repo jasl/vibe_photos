@@ -236,6 +236,12 @@ ai_photos_management/
 
 ## License
 
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+See the [LICENSE](LICENSE) file for full license text.
+
+### Third-Party Models
+
 This project uses the following open-source models:
 - SigLIP2: Apache 2.0
 - RT-DETR: Apache 2.0
