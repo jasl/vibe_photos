@@ -1,6 +1,6 @@
 """
-AI Model initialization and management.
-Loads SigLIP2 (embeddings), RT-DETR (object detection), and BLIP2 (captioning).
+AI Model initialization and management (v2).
+Loads SigLIP2 (embeddings), RT-DETR (object detection), Qwen2-VL (captioning), and POS tagger (tag extraction).
 """
 
 import torch
@@ -9,10 +9,11 @@ from transformers import (
     AutoModel,
     AutoImageProcessor,
     AutoModelForObjectDetection,
-    Blip2ForConditionalGeneration,
+    Qwen2VLForConditionalGeneration,
+    pipeline,
 )
 
-from config import EMBEDDING_MODEL_ID, DETECTION_MODEL_ID, CAPTION_MODEL_ID
+from config import EMBEDDING_MODEL_ID, DETECTION_MODEL_ID, CAPTION_MODEL_ID, TAGGER_MODEL_ID
 
 
 def get_inference_device():
@@ -43,16 +44,17 @@ class AIModels:
         self.detect_model = None
         self.caption_processor = None
         self.caption_model = None
+        self.pos_tagger = None
         
     def load_all_models(self):
         """
-        Load all three SOTA models: SigLIP2, RT-DETR, and BLIP2.
+        Load all SOTA models (v2): SigLIP2, RT-DETR, Qwen2-VL, and POS tagger.
         Uses device_map="auto" for efficient VRAM distribution.
         """
-        print("\n=== Loading AI Models ===")
+        print("\n=== Loading AI Models (v2) ===")
         
         # Model 1: SigLIP2 for embeddings (text + image)
-        print(f"\n[1/3] Loading Embedding Model: {EMBEDDING_MODEL_ID}")
+        print(f"\n[1/4] Loading Embedding Model: {EMBEDDING_MODEL_ID}")
         self.embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID, use_fast=True)
         self.embed_model = AutoModel.from_pretrained(
             EMBEDDING_MODEL_ID,
@@ -62,7 +64,7 @@ class AIModels:
         print("✓ Embedding model loaded successfully")
         
         # Model 2: RT-DETR for object detection
-        print(f"\n[2/3] Loading Object Detection Model: {DETECTION_MODEL_ID}")
+        print(f"\n[2/4] Loading Object Detection Model: {DETECTION_MODEL_ID}")
         self.detect_processor = AutoImageProcessor.from_pretrained(DETECTION_MODEL_ID, use_fast=True)
         self.detect_model = AutoModelForObjectDetection.from_pretrained(
             DETECTION_MODEL_ID,
@@ -71,17 +73,30 @@ class AIModels:
         ).eval()
         print("✓ Object detection model loaded successfully")
         
-        # Model 3: BLIP2 for generative captioning
-        print(f"\n[3/3] Loading Caption Generation Model: {CAPTION_MODEL_ID}")
-        self.caption_processor = AutoProcessor.from_pretrained(CAPTION_MODEL_ID, use_fast=True)
-        self.caption_model = Blip2ForConditionalGeneration.from_pretrained(
+        # Model 3: Qwen2-VL for generative captioning (upgraded from BLIP2)
+        print(f"\n[3/4] Loading Caption Generation Model: {CAPTION_MODEL_ID}")
+        self.caption_processor = AutoProcessor.from_pretrained(
+            CAPTION_MODEL_ID,
+            trust_remote_code=True
+        )
+        self.caption_model = Qwen2VLForConditionalGeneration.from_pretrained(
             CAPTION_MODEL_ID,
             dtype="auto",
-            device_map="auto"
+            device_map="auto",
+            trust_remote_code=True
         ).eval()
-        print("✓ Caption generation model loaded successfully")
+        print("✓ Caption generation model loaded successfully (Qwen2-VL)")
         
-        print("\n=== All models loaded successfully ===\n")
+        # Model 4: POS Tagger for tag extraction
+        print(f"\n[4/4] Loading POS Tagger for Tag Extraction: {TAGGER_MODEL_ID}")
+        self.pos_tagger = pipeline(
+            "token-classification",
+            model=TAGGER_MODEL_ID,
+            device=self.device
+        )
+        print("✓ POS tagger loaded successfully")
+        
+        print("\n=== All models loaded successfully (v2) ===\n")
 
 
 # Global instance

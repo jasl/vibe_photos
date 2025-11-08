@@ -1,29 +1,35 @@
 """
-Configuration constants for the AI Photo Management System.
+Configuration constants for the AI Photo Management System (v2).
 """
 
 import os
 
-# --- Model Configuration ---
+# --- Model Configuration (v2) ---
 # State-of-the-Art model checkpoints
 EMBEDDING_MODEL_ID = "google/siglip2-so400m-patch14-384"
 DETECTION_MODEL_ID = "PekingU/rtdetr_r101vd"
-CAPTION_MODEL_ID = "Salesforce/blip2-opt-2.7b"
+CAPTION_MODEL_ID = "Qwen/Qwen2-VL-7B-Instruct"  # Upgraded from BLIP2
+TAGGER_MODEL_ID = "vblagoje/bert-english-uncased-finetuned-pos"  # For tag extraction
 
 # Model parameters
 EMBEDDING_DIM = 1152  # Fixed dimension for SigLIP2 embeddings
-SIMILARITY_THRESHOLD = 0.98  # Threshold for duplicate detection (0.98+ = very similar)
+
+# Similarity thresholds (v2)
+VISUAL_SIMILARITY_THRESHOLD = 0.98  # For visual duplicate detection (very strict)
+FACE_SIMILARITY_THRESHOLD = 0.92  # For face recognition (more lenient)
+SEMANTIC_SIMILARITY_THRESHOLD = 0.95  # For merging groups with similar captions
 
 # --- Data Paths ---
 PHOTOS_DIR = "/home/jasl/datasets/my_photos"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-FAISS_INDEX_PATH = os.path.join(DATA_DIR, "photo_library.index")
+FAISS_IMAGE_INDEX_PATH = os.path.join(DATA_DIR, "photo_library.index")
+FAISS_FACE_INDEX_PATH = os.path.join(DATA_DIR, "face_library.index")
 SQLITE_DB_PATH = os.path.join(DATA_DIR, "photo_metadata.db")
 
 # --- Processing Configuration ---
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".JPG", ".JPEG", ".PNG", ".GIF", ".WEBP"}
 DETECTION_THRESHOLD = 0.9  # Confidence threshold for object detection
-MAX_CAPTION_TOKENS = 50  # Max tokens for caption generation
+MAX_CAPTION_TOKENS = 100  # Max tokens for caption generation (increased for Qwen)
 
 # --- Flask Configuration ---
 FLASK_HOST = "0.0.0.0"

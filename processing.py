@@ -1,6 +1,10 @@
 """
-Image processing pipeline with embedding extraction, object detection, and captioning.
-Implements caching logic to avoid redundant AI processing on duplicate images.
+Image processing pipeline with embedding extraction, object detection, and captioning (v2).
+Implements:
+- Solution 1: Face grouping and recognition
+- Solution 3: Tag extraction from captions
+- Solution 4: Upgraded Qwen2-VL captioning
+- Caching logic to avoid redundant AI processing on duplicate images
 """
 
 import torch
@@ -8,10 +12,11 @@ import faiss
 import numpy as np
 import json
 from PIL import Image
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from config import (
-    SIMILARITY_THRESHOLD,
+    VISUAL_SIMILARITY_THRESHOLD,
+    FACE_SIMILARITY_THRESHOLD,
     DETECTION_THRESHOLD,
     MAX_CAPTION_TOKENS
 )
@@ -21,10 +26,12 @@ from database import get_database
 
 class ImageProcessor:
     """
-    Handles the three-step image processing workflow:
+    Handles the v2 image processing workflow:
     1. Create embedding (fingerprint)
     2. Check for duplicates
     3. Run expensive AI pipeline only for unique images
+    4. Face grouping for persons
+    5. Tag extraction from captions
     """
     
     def __init__(self):
@@ -32,30 +39,114 @@ class ImageProcessor:
         self.db = get_database()
         
     @torch.no_grad()
-    def get_image_embedding(self, image: Image.Image) -> np.ndarray:
+    def get_embedding(self, image: Image.Image, model, processor) -> np.ndarray:
         """
-        Create a 1152-dimension L2-normalized embedding for an image.
-        This is the lightweight operation run on every photo.
+        Create a 1152-dimension L2-normalized embedding for any image (full or crop).
+        Flexible function that works for both full images and face crops.
         
         Args:
             image: PIL Image in RGB format
+            model: The embedding model to use
+            processor: The processor for the model
             
         Returns:
             L2-normalized numpy array of shape (1, 1152)
         """
-        inputs = self.models.embed_processor(
+        inputs = processor(
             images=image,
             return_tensors="pt"
         ).to(self.models.device)
         
         # Get image features (embedding)
-        image_features = self.models.embed_model.get_image_features(**inputs)
+        image_features = model.get_image_features(**inputs)
         
         # Convert to float32 for FAISS and normalize
         vector = image_features.cpu().numpy().astype(np.float32)
         faiss.normalize_L2(vector)
         
         return vector
+        
+    def extract_tags_from_caption(self, caption: str) -> List[str]:
+        """
+        Solution 3: Extract searchable tags from caption using POS tagging.
+        Extracts nouns (NN, NNS) and proper nouns (NNP).
+        
+        Args:
+            caption: Generated caption text
+            
+        Returns:
+            List of extracted tags (nouns)
+        """
+        tags_list = []
+        
+        try:
+            # Use POS tagger to identify parts of speech
+            pos_results = self.models.pos_tagger(caption)
+            
+            # Extract nouns and proper nouns
+            for entity in pos_results:
+                # Looking for noun tags: NN (noun), NNS (plural noun), NNP (proper noun)
+                if entity['entity'] in ['B-NN', 'I-NN', 'B-NNS', 'I-NNS', 'B-NNP', 'I-NNP']:
+                    tag = entity['word'].replace("##", "").strip()
+                    if tag and len(tag) > 1:  # Filter out single characters
+                        tags_list.append(tag.lower())
+                        
+            # Deduplicate
+            tags_list = list(set(tags_list))
+            
+        except Exception as e:
+            print(f"  > POS Tagger failed: {e}")
+            
+        return tags_list
+        
+    @torch.no_grad()
+    def get_or_create_person_group(self, person_embedding: np.ndarray) -> str:
+        """
+        Solution 1: Face grouping and recognition.
+        Searches the face index for a match. If found, returns existing person_group_id.
+        If not, creates a new person group.
+        
+        Args:
+            person_embedding: Face embedding vector
+            
+        Returns:
+            person_group_id (string)
+        """
+        # Search face index for similar faces
+        if self.db.faiss_face_index.ntotal > 0:
+            scores, faiss_ids = self.db.faiss_face_index.search(person_embedding, k=1)
+            similarity_score = scores[0][0]
+            matched_faiss_id = faiss_ids[0][0]
+        else:
+            similarity_score = 0.0
+            
+        # Check if this is a known person
+        if similarity_score > FACE_SIMILARITY_THRESHOLD:
+            self.db.cursor.execute(
+                "SELECT person_group_id FROM person_groups WHERE faiss_face_id = ?",
+                (int(matched_faiss_id),)
+            )
+            result = self.db.cursor.fetchone()
+            if result:
+                person_group_id = result[0]
+                print(f"  > Recognized person: {person_group_id} (similarity: {similarity_score:.4f})")
+                return person_group_id
+                
+        # This is a new person
+        new_faiss_id = self.db.faiss_face_index.ntotal
+        self.db.faiss_face_index.add(person_embedding)
+        
+        new_person_group_id = f"person_{new_faiss_id}"
+        default_name = f"Person {new_faiss_id + 1}"
+        
+        self.db.cursor.execute(
+            "INSERT INTO person_groups (person_group_id, name, faiss_face_id) VALUES (?, ?, ?)",
+            (new_person_group_id, default_name, int(new_faiss_id))
+        )
+        self.db.db_conn.commit()
+        
+        print(f"  > New person detected: {new_person_group_id}")
+        return new_person_group_id
         
     @torch.no_grad()
     def run_expensive_ai_pipeline(
@@ -64,39 +155,70 @@ class ImageProcessor:
         new_group_id: str
     ) -> Dict[str, str]:
         """
-        Run the full SOTA analysis on a unique image.
-        This includes caption generation and object detection.
+        Run the full SOTA analysis on a unique image (v2).
+        Includes: caption generation (Qwen2-VL), object detection, face grouping, and tag extraction.
         
         Args:
             image: PIL Image in RGB format
             new_group_id: Unique identifier for this image group
             
         Returns:
-            Dictionary with 'generated_caption' and 'detected_objects_json'
+            Dictionary with 'generated_caption', 'detected_objects_json', and 'extracted_tags_json'
         """
-        print(f"  > Running EXPENSIVE AI pipeline for new group: {new_group_id}")
+        print(f"  > Running EXPENSIVE AI pipeline (v2) for new group: {new_group_id}")
         ai_results = {}
         
-        # Step 1: Generate Caption
-        caption_inputs = self.models.caption_processor(
-            image,
+        # Solution 4: Generate Caption with Qwen2-VL
+        print(f"  > Generating caption with Qwen2-VL...")
+        
+        # Prepare chat template for Qwen2-VL
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": "Describe this image in detail."}
+                ]
+            }
+        ]
+        
+        # Process with Qwen2-VL
+        text_prompt = self.models.caption_processor.apply_chat_template(
+            messages,
+            add_generation_prompt=True
+        )
+        
+        inputs = self.models.caption_processor(
+            text=[text_prompt],
+            images=[image],
             return_tensors="pt"
         ).to(self.models.device)
         
         generated_ids = self.models.caption_model.generate(
-            **caption_inputs,
+            **inputs,
             max_new_tokens=MAX_CAPTION_TOKENS
         )
         
-        caption = self.models.caption_processor.batch_decode(
+        generated_text = self.models.caption_processor.batch_decode(
             generated_ids,
             skip_special_tokens=True
-        )[0].strip()
+        )[0]
         
+        # Extract just the assistant's response
+        if "assistant" in generated_text:
+            caption = generated_text.split("assistant")[-1].strip()
+        else:
+            caption = generated_text.strip()
+            
         ai_results["generated_caption"] = caption
         print(f"  > Generated Caption: '{caption}'")
         
-        # Step 2: Object Detection
+        # Solution 3: Extract Tags from Caption
+        tags = self.extract_tags_from_caption(caption)
+        ai_results["extracted_tags_json"] = json.dumps(tags)
+        print(f"  > Extracted Tags: {tags}")
+        
+        # Object Detection with Face Grouping (Solution 1)
         detect_inputs = self.models.detect_processor(
             images=image,
             return_tensors="pt"
@@ -112,27 +234,51 @@ class ImageProcessor:
             target_sizes=target_sizes
         )[0]
         
-        detected_objects = [
-            {
-                "label": self.models.detect_model.config.id2label[label.item()],
+        detected_objects = []
+        
+        for score, label_id, box in zip(
+            detections["scores"],
+            detections["labels"],
+            detections["boxes"]
+        ):
+            label = self.models.detect_model.config.id2label[label_id.item()]
+            detection_data = {
+                "label": label,
                 "score": score.item(),
                 "box": box.tolist()
             }
-            for score, label, box in zip(
-                detections["scores"],
-                detections["labels"],
-                detections["boxes"]
-            )
-        ]
+            
+            # Solution 1: Face Recognition for "person" objects
+            if label == "person":
+                try:
+                    # Crop the person from the image
+                    box_coords = [int(c) for c in box.tolist()]
+                    person_crop = image.crop((box_coords[0], box_coords[1], box_coords[2], box_coords[3]))
+                    
+                    # Create face embedding
+                    person_embedding = self.get_embedding(
+                        person_crop,
+                        self.models.embed_model,
+                        self.models.embed_processor
+                    )
+                    
+                    # Get or create person group
+                    person_group_id = self.get_or_create_person_group(person_embedding)
+                    detection_data["person_group_id"] = person_group_id
+                    
+                except Exception as e:
+                    print(f"  > Face embedding failed: {e}")
+                    
+            detected_objects.append(detection_data)
         
         ai_results["detected_objects_json"] = json.dumps(detected_objects)
-        print(f"  > Detected {len(detected_objects)} objects")
+        print(f"  > Detected {len(detected_objects)} objects (with face grouping)")
         
         return ai_results
         
     def process_new_image(self, image_path: str) -> bool:
         """
-        Main processing function for a new image file.
+        Main processing function for a new image file (v2).
         Implements: (1) Embed → (2) Search → (3) Cache/Process logic
         
         Args:
@@ -141,6 +287,15 @@ class ImageProcessor:
         Returns:
             True if successful, False if failed
         """
+        # Check if already processed
+        self.db.cursor.execute(
+            "SELECT group_id FROM images WHERE image_path = ?",
+            (image_path,)
+        )
+        if self.db.cursor.fetchone():
+            print(f"  > Already processed: {image_path}")
+            return True
+            
         try:
             # Load image
             image = Image.open(image_path).convert("RGB")
@@ -149,26 +304,30 @@ class ImageProcessor:
             return False
             
         # Step 1: Create Fingerprint (Embedding)
-        embedding = self.get_image_embedding(image)
+        embedding = self.get_embedding(
+            image,
+            self.models.embed_model,
+            self.models.embed_processor
+        )
         
         # Step 2: Check for Duplicates (Cache Check)
         similarity_score = 0.0
         matched_faiss_id = -1
         
-        if self.db.faiss_index.ntotal > 0:
+        if self.db.faiss_image_index.ntotal > 0:
             # Search FAISS for the 1 nearest neighbor
-            scores, faiss_ids = self.db.faiss_index.search(embedding, k=1)
+            scores, faiss_ids = self.db.faiss_image_index.search(embedding, k=1)
             similarity_score = scores[0][0]
             matched_faiss_id = faiss_ids[0][0]
             
         # Step 3: Branching Logic
-        if similarity_score > SIMILARITY_THRESHOLD:
+        if similarity_score > VISUAL_SIMILARITY_THRESHOLD:
             # CACHE HIT (Near-Duplicate)
             print(f"  > STATUS: Near-Duplicate Found (Score: {similarity_score:.4f})")
             
             # Get the group_id from the matched image
             self.db.cursor.execute(
-                "SELECT group_id FROM images WHERE faiss_id = ?",
+                "SELECT group_id FROM images WHERE faiss_image_id = ?",
                 (int(matched_faiss_id),)
             )
             result = self.db.cursor.fetchone()
@@ -183,40 +342,41 @@ class ImageProcessor:
                 
                 # Add this new image to the DB, linking to existing group
                 self.db.cursor.execute(
-                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_id) VALUES (?, ?, ?)",
+                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id) VALUES (?, ?, ?)",
                     (image_path, matched_group_id, None)
                 )
                 self.db.db_conn.commit()
                 return True
                 
-        if similarity_score <= SIMILARITY_THRESHOLD:
+        if similarity_score <= VISUAL_SIMILARITY_THRESHOLD:
             # CACHE MISS (Unique Photo)
             print(f"  > STATUS: Unique Photo (Top score: {similarity_score:.4f})")
             
             # Create a new unique ID for this group
-            new_group_id = f"group_{self.db.faiss_index.ntotal}"
+            new_group_id = f"group_{self.db.faiss_image_index.ntotal}"
             
             # Add this photo's vector to the FAISS index
-            new_faiss_id = self.db.faiss_index.ntotal
-            self.db.faiss_index.add(embedding)
+            new_faiss_id = self.db.faiss_image_index.ntotal
+            self.db.faiss_image_index.add(embedding)
             
             # Add this image to the images table
             self.db.cursor.execute(
-                "INSERT OR REPLACE INTO images (image_path, group_id, faiss_id) VALUES (?, ?, ?)",
+                "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id) VALUES (?, ?, ?)",
                 (image_path, new_group_id, int(new_faiss_id))
             )
             
-            # Run the expensive AI pipeline
+            # Run the expensive AI pipeline (v2)
             ai_results = self.run_expensive_ai_pipeline(image, new_group_id)
             
             # Store the AI results in the image_groups table
             self.db.cursor.execute(
-                "INSERT OR REPLACE INTO image_groups (group_id, canonical_path, generated_caption, detected_objects_json) VALUES (?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO image_groups (group_id, canonical_path, generated_caption, detected_objects_json, extracted_tags_json) VALUES (?, ?, ?, ?, ?)",
                 (
                     new_group_id,
                     image_path,
                     ai_results["generated_caption"],
-                    ai_results["detected_objects_json"]
+                    ai_results["detected_objects_json"],
+                    ai_results["extracted_tags_json"]
                 )
             )
             

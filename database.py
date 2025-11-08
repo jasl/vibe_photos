@@ -1,5 +1,5 @@
 """
-Database management for SQLite metadata and FAISS vector index.
+Database management for SQLite metadata and FAISS vector indexes (v2).
 """
 
 import sqlite3
@@ -7,18 +7,19 @@ import faiss
 import os
 from typing import Optional, Tuple
 
-from config import FAISS_INDEX_PATH, SQLITE_DB_PATH, EMBEDDING_DIM
+from config import FAISS_IMAGE_INDEX_PATH, FAISS_FACE_INDEX_PATH, SQLITE_DB_PATH, EMBEDDING_DIM
 
 
 class DatabaseManager:
     """
-    Manages both SQLite (metadata) and FAISS (vector search) databases.
+    Manages both SQLite (metadata) and FAISS (vector search) databases (v2).
     """
     
     def __init__(self):
         self.db_conn: Optional[sqlite3.Connection] = None
         self.cursor: Optional[sqlite3.Cursor] = None
-        self.faiss_index: Optional[faiss.Index] = None
+        self.faiss_image_index: Optional[faiss.Index] = None
+        self.faiss_face_index: Optional[faiss.Index] = None
         
     def init_databases(self):
         """
@@ -46,7 +47,7 @@ class DatabaseManager:
         CREATE TABLE IF NOT EXISTS images (
             image_path TEXT PRIMARY KEY,
             group_id TEXT,
-            faiss_id INTEGER
+            faiss_image_id INTEGER
         )
         """)
         
@@ -56,7 +57,17 @@ class DatabaseManager:
             group_id TEXT PRIMARY KEY,
             canonical_path TEXT,
             generated_caption TEXT,
-            detected_objects_json TEXT
+            detected_objects_json TEXT,
+            extracted_tags_json TEXT
+        )
+        """)
+        
+        # Table 3: Stores each unique person (v2 - Solution 1)
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS person_groups (
+            person_group_id TEXT PRIMARY KEY,
+            name TEXT,
+            faiss_face_id INTEGER
         )
         """)
         
@@ -67,35 +78,48 @@ class DatabaseManager:
         image_count = self.cursor.fetchone()[0]
         self.cursor.execute("SELECT COUNT(*) FROM image_groups")
         group_count = self.cursor.fetchone()[0]
+        self.cursor.execute("SELECT COUNT(*) FROM person_groups")
+        person_count = self.cursor.fetchone()[0]
         
-        print(f"SQLite DB: {image_count} images, {group_count} groups")
+        print(f"SQLite DB: {image_count} images, {group_count} groups, {person_count} persons")
         
     def _init_faiss(self):
         """
-        Initialize or load FAISS vector index.
+        Initialize or load FAISS vector indexes (v2: image + face).
         """
-        if os.path.exists(FAISS_INDEX_PATH):
-            # Load existing index
-            self.faiss_index = faiss.read_index(FAISS_INDEX_PATH)
-            print(f"FAISS Index: Loaded {self.faiss_index.ntotal} vectors from disk")
+        # Image index
+        if os.path.exists(FAISS_IMAGE_INDEX_PATH):
+            self.faiss_image_index = faiss.read_index(FAISS_IMAGE_INDEX_PATH)
+            print(f"FAISS Image Index: Loaded {self.faiss_image_index.ntotal} vectors from disk")
         else:
-            # Create new index (Inner Product - equivalent to cosine similarity for normalized vectors)
-            self.faiss_index = faiss.IndexFlatIP(EMBEDDING_DIM)
-            print(f"FAISS Index: Created new index (dim={EMBEDDING_DIM})")
+            self.faiss_image_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            print(f"FAISS Image Index: Created new index (dim={EMBEDDING_DIM})")
+            
+        # Face index (v2 - Solution 1)
+        if os.path.exists(FAISS_FACE_INDEX_PATH):
+            self.faiss_face_index = faiss.read_index(FAISS_FACE_INDEX_PATH)
+            print(f"FAISS Face Index: Loaded {self.faiss_face_index.ntotal} vectors from disk")
+        else:
+            self.faiss_face_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            print(f"FAISS Face Index: Created new index (dim={EMBEDDING_DIM})")
             
     def save_databases(self):
         """
-        Save both databases to disk.
+        Save both databases to disk (v2).
         """
         # Commit SQLite changes
         if self.db_conn:
             self.db_conn.commit()
             print(f"✓ SQLite database saved to {SQLITE_DB_PATH}")
         
-        # Save FAISS index
-        if self.faiss_index:
-            faiss.write_index(self.faiss_index, FAISS_INDEX_PATH)
-            print(f"✓ FAISS index saved to {FAISS_INDEX_PATH}")
+        # Save FAISS indexes
+        if self.faiss_image_index:
+            faiss.write_index(self.faiss_image_index, FAISS_IMAGE_INDEX_PATH)
+            print(f"✓ FAISS image index saved to {FAISS_IMAGE_INDEX_PATH}")
+            
+        if self.faiss_face_index:
+            faiss.write_index(self.faiss_face_index, FAISS_FACE_INDEX_PATH)
+            print(f"✓ FAISS face index saved to {FAISS_FACE_INDEX_PATH}")
             
     def close(self):
         """
@@ -106,7 +130,7 @@ class DatabaseManager:
             
     def get_stats(self) -> dict:
         """
-        Get database statistics.
+        Get database statistics (v2).
         """
         stats = {}
         
@@ -117,10 +141,16 @@ class DatabaseManager:
             self.cursor.execute("SELECT COUNT(*) FROM image_groups")
             stats['unique_groups'] = self.cursor.fetchone()[0]
             
+            self.cursor.execute("SELECT COUNT(*) FROM person_groups")
+            stats['unique_persons'] = self.cursor.fetchone()[0]
+            
             stats['duplicate_images'] = stats['total_images'] - stats['unique_groups']
             
-        if self.faiss_index:
-            stats['faiss_vectors'] = self.faiss_index.ntotal
+        if self.faiss_image_index:
+            stats['faiss_image_vectors'] = self.faiss_image_index.ntotal
+            
+        if self.faiss_face_index:
+            stats['faiss_face_vectors'] = self.faiss_face_index.ntotal
             
         return stats
 
