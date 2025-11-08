@@ -27,10 +27,6 @@
     <main class="container">
         <div class="search-header">
             <h2>Search Results for "{{ query }}"</h2>
-            <p class="search-stats">
-                Found {{ total_photos }} photo{% if total_photos != 1 %}s{% endif %}
-                {% if total_objects > 0 %} and {{ total_objects }} object{% if total_objects != 1 %}s{% endif %}{% endif %}
-            </p>
         </div>
 
         {% if total_photos > 0 or total_objects > 0 %}
