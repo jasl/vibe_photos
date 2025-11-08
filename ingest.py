@@ -157,7 +157,7 @@ class FastIngestProcessor:
         inputs = self.embed_processor(
             images=image,
             return_tensors="pt"
-        ).to(self.device)
+        ).to(self.device, self.dtype)
         
         image_features = self.embed_model.get_image_features(**inputs)
         vector = image_features.cpu().numpy().astype(np.float32)
@@ -172,7 +172,7 @@ class FastIngestProcessor:
             return_tensors="pt",
             padding=True,
             truncation=True
-        ).to(self.device)
+        ).to(self.device, self.dtype)
         
         text_features = self.embed_model.get_text_features(**inputs)
         vector = text_features.cpu().numpy().astype(np.float32)
@@ -185,7 +185,7 @@ class FastIngestProcessor:
         inputs = self.caption_processor(
             image,
             return_tensors="pt"
-        ).to(self.device)
+        ).to(self.device, self.dtype)
         
         generated_ids = self.caption_model.generate(**inputs, max_new_tokens=50)
         caption = self.caption_processor.batch_decode(
