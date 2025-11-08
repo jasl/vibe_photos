@@ -265,6 +265,9 @@ class FastIngestProcessor:
         if semantic_score > SEMANTIC_SIMILARITY_THRESHOLD:
             # Semantic duplicate found
             print(f"  > Semantic Duplicate (score: {semantic_score:.4f})")
+            # IMPORTANT: Caption index and image index share the same IDs
+            # The matched_caption_faiss_id corresponds to the same position in image_index
+            # Both indexes were added with the same ID when the group was created
             self.db.cursor.execute(
                 "SELECT group_id FROM images WHERE faiss_image_id = ?",
                 (int(matched_caption_faiss_id),)
@@ -278,6 +281,11 @@ class FastIngestProcessor:
                 )
                 self.db.db_conn.commit()
                 return True
+            else:
+                # If no match found, this is an index desync issue
+                # Treat as unique to avoid wrong group assignment
+                print(f"  > WARNING: Caption index match but no corresponding image index entry")
+                semantic_score = 0.0  # Force creation of new group
                 
         # Stage 4: New unique image - create group and queue
         print(f"  > Semantically Unique (score: {semantic_score:.4f}). Queuing for deep processing...")
