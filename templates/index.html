@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🖼️ AI Photo Gallery</h1>
+            <nav>
+                <a href="/" class="active">Gallery View</a>
+                <a href="/groups">Grouped View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_images }}</span>
+                <span class="stat-label">Total Images</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.unique_groups }}</span>
+                <span class="stat-label">Unique Groups</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.duplicate_images }}</span>
+                <span class="stat-label">Duplicates</span>
+            </div>
+        </div>
+
+        <div class="gallery-grid">
+            {% for group in groups %}
+            <div class="photo-card">
+                <a href="/group/{{ group.group_id }}">
+                    <div class="photo-container">
+                        <img src="/photo{{ group.canonical_path }}" 
+                             alt="{{ group.caption }}"
+                             loading="lazy">
+                    </div>
+                    <div class="photo-info">
+                        <p class="caption">{{ group.caption }}</p>
+                        <div class="metadata">
+                            <span class="badge">{{ group.object_count }} objects</span>
+                            {% if group.image_count > 1 %}
+                            <span class="badge duplicate">{{ group.image_count }} similar</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not groups %}
+        <div class="empty-state">
+            <h2>No Photos Indexed Yet</h2>
+            <p>Run <code>uv run index_photos.py</code> to index your photos.</p>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, and BLIP2</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grouped Photos - AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🖼️ AI Photo Gallery</h1>
+            <nav>
+                <a href="/">Gallery View</a>
+                <a href="/groups" class="active">Grouped View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value">{{ stats.total_images }}</span>
+                <span class="stat-label">Total Images</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ categories|length }}</span>
+                <span class="stat-label">Categories</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">{{ stats.unique_groups }}</span>
+                <span class="stat-label">Unique Groups</span>
+            </div>
+        </div>
+
+        <div class="groups-container">
+            {% for category, groups in categories.items() %}
+            <div class="category-section">
+                <div class="category-header">
+                    <h2>{{ category }}</h2>
+                    <span class="category-count">{{ groups|length }} photo{% if groups|length != 1 %}s{% endif %}</span>
+                </div>
+                
+                <div class="category-grid">
+                    {% for group in groups %}
+                    <div class="photo-card">
+                        <a href="/group/{{ group.group_id }}">
+                            <div class="photo-container">
+                                <img src="/photo{{ group.canonical_path }}" 
+                                     alt="{{ group.caption }}"
+                                     loading="lazy">
+                            </div>
+                            <div class="photo-info">
+                                <p class="caption">{{ group.caption }}</p>
+                                <div class="metadata">
+                                    <span class="badge">{{ group.object_count }} objects</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not categories %}
+        <div class="empty-state">
+            <h2>No Photos Indexed Yet</h2>
+            <p>Run <code>uv run index_photos.py</code> to index your photos.</p>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, and BLIP2</p>
+        </div>
+    </footer>
+</body>
+</html>

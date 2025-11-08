@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ caption }} - AI Photo Gallery</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🖼️ AI Photo Gallery</h1>
+            <nav>
+                <a href="/">Gallery View</a>
+                <a href="/groups">Grouped View</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="breadcrumb">
+            <a href="/">Gallery</a> / <span>{{ group_id }}</span>
+        </div>
+
+        <div class="detail-container">
+            <div class="main-image">
+                <img src="/photo{{ canonical_path }}" alt="{{ caption }}">
+            </div>
+
+            <div class="detail-info">
+                <h2>Photo Details</h2>
+                
+                <div class="info-section">
+                    <h3>Generated Caption</h3>
+                    <p class="caption-text">{{ caption }}</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Detected Objects ({{ objects|length }})</h3>
+                    {% if objects %}
+                    <div class="objects-list">
+                        {% for obj in objects %}
+                        <div class="object-item">
+                            <span class="object-label">{{ obj.label }}</span>
+                            <span class="object-confidence">{{ "%.1f"|format(obj.score * 100) }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="no-objects">No objects detected</p>
+                    {% endif %}
+                </div>
+
+                <div class="info-section">
+                    <h3>File Information</h3>
+                    <div class="file-info">
+                        <p><strong>Path:</strong> <code>{{ canonical_path | basename }}</code></p>
+                        <p><strong>Size:</strong> {{ "%.2f"|format(file_size_mb) }} MB</p>
+                        <p><strong>Group ID:</strong> {{ group_id }}</p>
+                    </div>
+                </div>
+
+                {% if similar_images|length > 1 %}
+                <div class="info-section">
+                    <h3>Similar Images ({{ similar_images|length }})</h3>
+                    <div class="similar-grid">
+                        {% for img_path in similar_images %}
+                        <div class="similar-thumb">
+                            <img src="/photo{{ img_path }}" 
+                                 alt="Similar image"
+                                 title="{{ img_path | basename }}">
+                            <p class="thumb-label">{{ img_path | basename }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>AI Photo Management System - Powered by SigLIP2, RT-DETR, and BLIP2</p>
+        </div>
+    </footer>
+</body>
+</html>

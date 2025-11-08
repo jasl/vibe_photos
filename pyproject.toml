@@ -1,0 +1,40 @@
+[project]
+name = "ai-photos-management"
+version = "0.1.0"
+description = "AI-powered photo management system using SOTA models"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "torch>=2.9.0",
+    "torchvision",
+    "transformers>=4.57.1",
+    "pillow>=12.0.0",
+    "accelerate>=1.11.0",
+    "faiss-cpu>=1.12.0",
+    "flask>=3.1.2",
+    "tqdm>=4.67.1",
+    "numpy>=2.3.4",
+]
+
+[tool.uv.sources]
+# Install PyTorch with CUDA support on Linux/Windows (CUDA doesn't exist for Mac).
+# NOTE: We must explicitly request them as `dependencies` above. These improved
+# versions will not be selected if they're only third-party dependencies.
+torch = [
+  { index = "pytorch-cuda", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchaudio = [
+  { index = "pytorch-cuda", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cuda", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+# Use PyTorch built for NVIDIA Toolkit version 13.0.
+# Available versions: https://pytorch.org/get-started/locally/
+url = "https://download.pytorch.org/whl/cu130"
+# Only use this index when explicitly requested by `tool.uv.sources`.
+explicit = false
+

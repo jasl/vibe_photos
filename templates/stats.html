@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - AI Photo Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            color: #718096;
+            font-weight: 500;
+        }
+        
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .efficiency-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e2e8f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 1s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1>📸 AI Photo Management</h1>
+            <div class="nav-links">
+                <a href="/">Gallery</a>
+                <a href="/groups">Grouped View</a>
+                <a href="/stats" class="active">Statistics</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h2>System Statistics</h2>
+            <p class="subtitle">Overview of your indexed photo library</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📚</div>
+                <div class="stat-value">{{ "{:,}".format(stats.total_images) }}</div>
+                <div class="stat-label">Total Photos</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">✨</div>
+                <div class="stat-value">{{ "{:,}".format(stats.unique_images) }}</div>
+                <div class="stat-label">Unique Photos</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🔄</div>
+                <div class="stat-value">{{ "{:,}".format(stats.duplicate_images) }}</div>
+                <div class="stat-label">Duplicate Photos</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📁</div>
+                <div class="stat-value">{{ "{:,}".format(stats.total_groups) }}</div>
+                <div class="stat-label">Photo Groups</div>
+            </div>
+        </div>
+
+        {% if stats.total_images > 0 %}
+        <div class="efficiency-section">
+            <h3 style="margin-top: 0; color: #2d3748;">Deduplication Efficiency</h3>
+            <p style="color: #718096;">
+                The system identified {{ "{:,}".format(stats.duplicate_images) }} duplicate/similar photos
+                ({{ "%.1f"|format((stats.duplicate_images / stats.total_images) * 100) }}% of your library).
+                These photos reuse AI analysis from their canonical versions, significantly improving processing efficiency.
+            </p>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" 
+                     style="width: {{ (stats.unique_images / stats.total_images) * 100 }}%">
+                    {{ "%.1f"|format((stats.unique_images / stats.total_images) * 100) }}% Unique
+                </div>
+            </div>
+            
+            <p style="color: #718096; margin-top: 1rem; font-size: 0.95rem;">
+                💡 <strong>Processing saved:</strong> 
+                By detecting duplicates, the system avoided running expensive AI analysis on 
+                {{ "{:,}".format(stats.duplicate_images) }} photos, saving significant GPU time and energy.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p>AI Photo Management System | Powered by SigLIP2, RT-DETR, BLIP2</p>
+    </footer>
+</body>
+</html>
+
