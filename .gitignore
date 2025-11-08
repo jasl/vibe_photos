@@ -3,6 +3,9 @@ data/
 *.index
 *.db
 
+# Logs
+*.log
+
 # Python
 __pycache__/
 *.py[cod]

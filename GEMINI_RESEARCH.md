@@ -59,10 +59,10 @@ DEVICE, DTYPE = get_inference_device_and_dtype()
 # Use device_map="auto" and float16 for efficient 16GB VRAM usage
 
 print(f"Loading Model 1: Embedding (SOTA: {EMBEDDING_MODEL_ID})")
-embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID)
+embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID, use_fast=True)
 embed_model = AutoModel.from_pretrained(
     EMBEDDING_MODEL_ID,
-    torch_dtype=DTYPE,
+    dtype=DTYPE,
     device_map="auto"
 ).eval()
 
@@ -70,7 +70,7 @@ print(f"Loading Model 2: Object Detection (SOTA: {DETECTION_MODEL_ID})")
 detect_processor = AutoImageProcessor.from_pretrained(DETECTION_MODEL_ID)
 detect_model = AutoModelForObjectDetection.from_pretrained(
     DETECTION_MODEL_ID,
-    torch_dtype=DTYPE,
+    dtype=DTYPE,
     device_map="auto"
 ).eval()
 
