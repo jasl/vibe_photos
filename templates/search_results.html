@@ -53,7 +53,7 @@
                     <div class="photo-card">
                         <a href="/group/{{ photo.group_id }}">
                         <div class="photo-container">
-                            <img src="/thumbnail{{ photo.canonical_path | relative_to_photos }}" 
+                            <img src="/thumbnail/{{ photo.canonical_path | relative_to_photos }}" 
                                  alt="{{ photo.caption }}"
                                  loading="lazy">
                             <div class="match-badge">{{ photo.match_reason }}</div>
