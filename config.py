@@ -14,7 +14,8 @@ CAPTION_MODEL_ID = "Qwen/Qwen2-VL-7B-Instruct"  # Upgraded from BLIP2
 TAGGER_MODEL_ID = "vblagoje/bert-english-uncased-finetuned-pos"  # For tag extraction
 
 # Model parameters
-EMBEDDING_DIM = 1152  # Fixed dimension for SigLIP2 embeddings
+# CRITICAL FIX: SigLIP-Giant has dimension 1536, not 1152!
+EMBEDDING_DIM = 1536  # Fixed dimension for SigLIP2-Giant embeddings (was 1152 for so400m)
 
 # Similarity thresholds (v2)
 VISUAL_SIMILARITY_THRESHOLD = 0.98  # For visual duplicate detection (very strict)
