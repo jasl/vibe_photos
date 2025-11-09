@@ -3,6 +3,9 @@ data/
 *.index
 *.db
 
+# Thumbnails (v3.2)
+data/thumbnails/
+
 # Logs
 logs/
 *.log

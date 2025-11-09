@@ -6,11 +6,21 @@ Provides gallery view, grouped view, and detail view.
 
 import os
 import json
+import hashlib
 from pathlib import Path
 from flask import Flask, render_template, send_file, abort
 from collections import defaultdict
+from PIL import Image
 
-from config import FLASK_HOST, FLASK_PORT, FLASK_DEBUG, PHOTOS_DIR, SQLITE_DB_PATH
+from config import (
+    FLASK_HOST, 
+    FLASK_PORT, 
+    FLASK_DEBUG, 
+    PHOTOS_DIR, 
+    SQLITE_DB_PATH,
+    THUMBNAILS_DIR,
+    THUMBNAIL_SIZE
+)
 import sqlite3
 
 app = Flask(__name__)
@@ -21,6 +31,41 @@ def get_db_connection():
     conn = sqlite3.connect(SQLITE_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def get_thumbnail_path(image_path: str) -> str:
+    """
+    Generate thumbnail path from image path using hash.
+    V3.2: Thumbnail support for better performance.
+    """
+    # Create unique filename from path hash
+    path_hash = hashlib.md5(image_path.encode()).hexdigest()
+    ext = Path(image_path).suffix.lower()
+    if ext not in ['.jpg', '.jpeg', '.png']:
+        ext = '.jpg'
+    return os.path.join(THUMBNAILS_DIR, f"{path_hash}{ext}")
+
+
+def get_or_create_thumbnail(image_path: str) -> str:
+    """
+    Get existing thumbnail or create if needed.
+    Returns path to thumbnail file.
+    """
+    thumbnail_path = get_thumbnail_path(image_path)
+    
+    # Return if thumbnail already exists
+    if os.path.exists(thumbnail_path):
+        return thumbnail_path
+        
+    # Create thumbnail
+    try:
+        img = Image.open(image_path)
+        img.thumbnail(THUMBNAIL_SIZE, Image.Resampling.LANCZOS)
+        img.save(thumbnail_path, quality=85, optimize=True)
+        return thumbnail_path
+    except Exception as e:
+        # If thumbnail creation fails, return original
+        return image_path
 
 
 def get_group_categories():
@@ -651,10 +696,34 @@ def search():
     )
 
 
+@app.route('/thumbnail/<path:filepath>')
+def serve_thumbnail(filepath):
+    """
+    Serve a thumbnail for the photo (V3.2).
+    Creates thumbnail on-demand if not cached.
+    """
+    # Construct full path to original
+    full_path = os.path.join(PHOTOS_DIR, filepath)
+    
+    # Security check
+    real_path = os.path.realpath(full_path)
+    real_photos_dir = os.path.realpath(PHOTOS_DIR)
+    
+    if not real_path.startswith(real_photos_dir):
+        abort(403)
+        
+    if not os.path.exists(real_path):
+        abort(404)
+        
+    # Get or create thumbnail
+    thumbnail_path = get_or_create_thumbnail(real_path)
+    return send_file(thumbnail_path)
+
+
 @app.route('/photos/<path:filepath>')
 def serve_photo(filepath):
     """
-    Serve a photo file from the photos directory.
+    Serve a full-resolution photo file from the photos directory.
     Security: Validate path to prevent directory traversal.
     """
     # Construct full path

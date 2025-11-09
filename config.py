@@ -25,9 +25,13 @@ SEMANTIC_SIMILARITY_THRESHOLD = 0.95  # For merging groups with similar captions
 # --- Data Paths ---
 PHOTOS_DIR = "/home/jasl/datasets/my_photos"
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+THUMBNAILS_DIR = os.path.join(DATA_DIR, "thumbnails")  # V3.2: Thumbnail cache
 FAISS_IMAGE_INDEX_PATH = os.path.join(DATA_DIR, "photo_library.index")
 FAISS_FACE_INDEX_PATH = os.path.join(DATA_DIR, "face_library.index")
 SQLITE_DB_PATH = os.path.join(DATA_DIR, "photo_metadata.db")
+
+# Thumbnail settings
+THUMBNAIL_SIZE = (400, 400)  # Max width/height for thumbnails
 
 # --- Processing Configuration ---
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".JPG", ".JPEG", ".PNG", ".GIF", ".WEBP"}
@@ -39,5 +43,6 @@ FLASK_HOST = "0.0.0.0"
 FLASK_PORT = 5000
 FLASK_DEBUG = True
 
-# Ensure data directory exists
+# Ensure data and thumbnails directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(THUMBNAILS_DIR, exist_ok=True)
