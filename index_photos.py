@@ -75,7 +75,7 @@ class FastIngestProcessor:
         
         # Model 1: SigLIP-so400m for embeddings
         print(f"\n[1/2] Loading Embedding Model: {EMBEDDING_MODEL_ID}")
-        self.embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID)
+        self.embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID, use_fast=True)
         self.embed_model = AutoModel.from_pretrained(
             EMBEDDING_MODEL_ID,
             dtype="auto",
@@ -85,7 +85,7 @@ class FastIngestProcessor:
         
         # Model 2: BLIP2 for fast captions
         print(f"\n[2/2] Loading Fast Caption Model: {FAST_CAPTION_MODEL_ID}")
-        self.caption_processor = Blip2Processor.from_pretrained(FAST_CAPTION_MODEL_ID)
+        self.caption_processor = Blip2Processor.from_pretrained(FAST_CAPTION_MODEL_ID, use_fast=True)
         self.caption_model = Blip2ForConditionalGeneration.from_pretrained(
             FAST_CAPTION_MODEL_ID,
             dtype="auto",
