@@ -234,7 +234,7 @@ class FastIngestProcessor:
             # Visual duplicate found
             print(f"  > Visual Duplicate (score: {visual_score:.4f})")
             self.db.cursor.execute(
-                "SELECT group_id, canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
+                "SELECT i.group_id, g.canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
                 (int(matched_image_faiss_id),)
             )
             result = self.db.cursor.fetchone()
@@ -272,7 +272,7 @@ class FastIngestProcessor:
             # The matched_caption_faiss_id corresponds to the same position in image_index
             # Both indexes were added with the same ID when the group was created
             self.db.cursor.execute(
-                "SELECT group_id, canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
+                "SELECT i.group_id, g.canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
                 (int(matched_caption_faiss_id),)
             )
             result = self.db.cursor.fetchone()
