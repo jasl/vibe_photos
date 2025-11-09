@@ -234,17 +234,20 @@ class FastIngestProcessor:
             # Visual duplicate found
             print(f"  > Visual Duplicate (score: {visual_score:.4f})")
             self.db.cursor.execute(
-                "SELECT group_id FROM images WHERE faiss_image_id = ?",
+                "SELECT group_id, canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
                 (int(matched_image_faiss_id),)
             )
             result = self.db.cursor.fetchone()
             if result:
                 group_id = result[0]
+                duplicate_of_path = result[1]
+                # V3.2: Store duplicate debugging information
                 self.db.cursor.execute(
-                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id) VALUES (?, ?, ?)",
-                    (image_path, group_id, None)
+                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id, duplicate_of_path, duplicate_score) VALUES (?, ?, ?, ?, ?)",
+                    (image_path, group_id, None, duplicate_of_path, visual_score)
                 )
                 self.db.db_conn.commit()
+                print(f"  > Added to group {group_id}, duplicate of {Path(duplicate_of_path).name}")
                 return True
                 
         # Stage 3: Semantic deduplication
@@ -269,17 +272,20 @@ class FastIngestProcessor:
             # The matched_caption_faiss_id corresponds to the same position in image_index
             # Both indexes were added with the same ID when the group was created
             self.db.cursor.execute(
-                "SELECT group_id FROM images WHERE faiss_image_id = ?",
+                "SELECT group_id, canonical_path FROM images i JOIN image_groups g ON i.group_id = g.group_id WHERE i.faiss_image_id = ?",
                 (int(matched_caption_faiss_id),)
             )
             result = self.db.cursor.fetchone()
             if result:
                 group_id = result[0]
+                duplicate_of_path = result[1]
+                # V3.2: Store duplicate debugging information
                 self.db.cursor.execute(
-                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id) VALUES (?, ?, ?)",
-                    (image_path, group_id, None)
+                    "INSERT OR REPLACE INTO images (image_path, group_id, faiss_image_id, duplicate_of_path, duplicate_score) VALUES (?, ?, ?, ?, ?)",
+                    (image_path, group_id, None, duplicate_of_path, semantic_score)
                 )
                 self.db.db_conn.commit()
+                print(f"  > Added to group {group_id}, semantically similar to {Path(duplicate_of_path).name}")
                 return True
             else:
                 # If no match found, this is an index desync issue

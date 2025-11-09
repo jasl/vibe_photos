@@ -4,9 +4,11 @@ Configuration constants for the AI Photo Management System (v2).
 
 import os
 
-# --- Model Configuration (v2) ---
+# --- Model Configuration (v3.2) ---
 # State-of-the-Art model checkpoints
-EMBEDDING_MODEL_ID = "google/siglip2-so400m-patch14-384"
+
+# CRITICAL: Use SigLIP-Giant for ALL embeddings (consistency fix)
+EMBEDDING_MODEL_ID = "google/siglip2-giant-opt-patch16-384"  # Upgraded from so400m
 DETECTION_MODEL_ID = "PekingU/rtdetr_r101vd"
 CAPTION_MODEL_ID = "Qwen/Qwen2-VL-7B-Instruct"  # Upgraded from BLIP2
 TAGGER_MODEL_ID = "vblagoje/bert-english-uncased-finetuned-pos"  # For tag extraction

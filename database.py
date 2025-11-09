@@ -53,12 +53,14 @@ class DatabaseManager:
         self.db_conn = sqlite3.connect(SQLITE_DB_PATH)
         self.cursor = self.db_conn.cursor()
         
-        # Table 1: Stores info for every single image file
+        # Table 1: Stores info for every single image file (v3.2 - duplicate debugging)
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS images (
             image_path TEXT PRIMARY KEY,
             group_id TEXT,
-            faiss_image_id INTEGER
+            faiss_image_id INTEGER,
+            duplicate_of_path TEXT,
+            duplicate_score REAL
         )
         """)
         
@@ -152,6 +154,26 @@ class DatabaseManager:
                     print(f"  ✗ Migration failed: {e}")
             self.db_conn.commit()
             print("Schema migration complete.\n")
+        
+        # V3.2: Add duplicate debugging columns to images table if missing
+        self.cursor.execute("PRAGMA table_info(images)")
+        images_columns = {row[1] for row in self.cursor.fetchall()}
+        
+        images_migrations = []
+        if 'duplicate_of_path' not in images_columns:
+            images_migrations.append("ALTER TABLE images ADD COLUMN duplicate_of_path TEXT")
+        if 'duplicate_score' not in images_columns:
+            images_migrations.append("ALTER TABLE images ADD COLUMN duplicate_score REAL")
+            
+        if images_migrations:
+            print(f"\nMigrating images table to v3.2 ({len(images_migrations)} columns)...")
+            for migration in images_migrations:
+                try:
+                    self.cursor.execute(migration)
+                    print(f"  ✓ {migration.split('ADD COLUMN')[1].split()[0]}")
+                except Exception as e:
+                    print(f"  ✗ Migration failed: {e}")
+            self.db_conn.commit()
         
     def _init_faiss(self):
         """
