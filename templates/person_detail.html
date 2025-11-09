@@ -40,7 +40,7 @@
             <div class="photo-card">
                 <a href="/group/{{ group.group_id }}">
                     <div class="photo-container">
-                        <img src="/photo{{ group.canonical_path }}" 
+                        <img src="/thumbnail{{ group.canonical_path | relative_to_photos }}" 
                              alt="{{ group.caption }}"
                              loading="lazy">
                     </div>

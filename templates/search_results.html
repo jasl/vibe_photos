@@ -52,12 +52,12 @@
                     {% for photo in photo_results %}
                     <div class="photo-card">
                         <a href="/group/{{ photo.group_id }}">
-                            <div class="photo-container">
-                                <img src="/photo{{ photo.canonical_path }}" 
-                                     alt="{{ photo.caption }}"
-                                     loading="lazy">
-                                <div class="match-badge">{{ photo.match_reason }}</div>
-                            </div>
+                        <div class="photo-container">
+                            <img src="/thumbnail{{ photo.canonical_path | relative_to_photos }}" 
+                                 alt="{{ photo.caption }}"
+                                 loading="lazy">
+                            <div class="match-badge">{{ photo.match_reason }}</div>
+                        </div>
                             <div class="photo-info">
                                 <p class="caption">{{ photo.caption }}</p>
                                 <div class="metadata">
