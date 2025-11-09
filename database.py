@@ -80,12 +80,24 @@ class DatabaseManager:
         )
         """)
         
-        # Table 3: Stores each unique person (v2 - Solution 1)
+        # Table 3: Stores each unique person (v3.2 - updated)
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS person_groups (
             person_group_id TEXT PRIMARY KEY,
             name TEXT,
-            faiss_face_id INTEGER
+            representative_faiss_id INTEGER
+        )
+        """)
+        
+        # Table 5: Links faces to photos they appear in (v3.2 - NEW)
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS face_appearances (
+            appearance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_path TEXT,
+            person_group_id TEXT,
+            box_json TEXT,
+            FOREIGN KEY (image_path) REFERENCES images (image_path),
+            FOREIGN KEY (person_group_id) REFERENCES person_groups (person_group_id)
         )
         """)
         
@@ -174,6 +186,23 @@ class DatabaseManager:
                 except Exception as e:
                     print(f"  ✗ Migration failed: {e}")
             self.db_conn.commit()
+            
+        # V3.2: Migrate person_groups table (faiss_face_id → representative_faiss_id)
+        self.cursor.execute("PRAGMA table_info(person_groups)")
+        person_columns = {row[1] for row in self.cursor.fetchall()}
+        
+        # Check if old column exists and needs renaming
+        if 'faiss_face_id' in person_columns and 'representative_faiss_id' not in person_columns:
+            print("\nMigrating person_groups table (rename faiss_face_id)...")
+            try:
+                # SQLite doesn't support column rename, so we create new and copy
+                self.cursor.execute("ALTER TABLE person_groups ADD COLUMN representative_faiss_id INTEGER")
+                self.cursor.execute("UPDATE person_groups SET representative_faiss_id = faiss_face_id")
+                # Note: Can't drop old column in SQLite easily, but new code will use representative_faiss_id
+                print("  ✓ representative_faiss_id added")
+                self.db_conn.commit()
+            except Exception as e:
+                print(f"  ✗ Migration failed: {e}")
         
     def _init_faiss(self):
         """
