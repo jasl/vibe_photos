@@ -54,7 +54,7 @@ def get_group_categories():
         category = " ".join(words).capitalize()
         
         # Count objects
-        objects = json.loads(objects_json)
+        objects = json.loads(objects_json) if objects_json else []
         
         categories[category].append({
             'group_id': group_id,
@@ -183,7 +183,7 @@ def group_detail(group_id):
     caption = result['generated_caption']
     objects_json = result['detected_objects_json']
     tags_json = result['extracted_tags_json']
-    objects = json.loads(objects_json)
+    objects = json.loads(objects_json) if objects_json else []
     tags = json.loads(tags_json) if tags_json else []
     
     # Get all images in this group
@@ -227,6 +227,8 @@ def get_all_objects():
     
     for row in cursor.fetchall():
         objects_json = row['detected_objects_json']
+        if not objects_json:
+            continue
         objects = json.loads(objects_json)
         
         # Count each unique object
@@ -304,6 +306,8 @@ def object_detail(object_name):
         canonical_path = row['canonical_path']
         caption = row['generated_caption']
         objects_json = row['detected_objects_json']
+        if not objects_json:
+            continue
         objects = json.loads(objects_json)
         
         # Check if this object is in the photo
@@ -433,6 +437,8 @@ def person_detail(person_group_id):
         canonical_path = row['canonical_path']
         caption = row['generated_caption']
         objects_json = row['detected_objects_json']
+        if not objects_json:
+            continue
         objects = json.loads(objects_json)
         
         # Check if this person is in the photo
@@ -494,9 +500,9 @@ def search():
     for row in cursor.fetchall():
         group_id = row['group_id']
         canonical_path = row['canonical_path']
-        caption = row['generated_caption']
+        caption = row['generated_caption'] or row['fast_caption']
         objects_json = row['detected_objects_json']
-        objects = json.loads(objects_json)
+        objects = json.loads(objects_json) if objects_json else []
         
         # Get count of images in this group
         cursor.execute(
@@ -533,8 +539,10 @@ def search():
             continue
             
         canonical_path = row['canonical_path']
-        caption = row['generated_caption']
+        caption = row['generated_caption'] or row['fast_caption']
         objects_json = row['detected_objects_json']
+        if not objects_json:
+            continue
         objects = json.loads(objects_json)
         
         # Verify the object actually contains the search term
@@ -568,6 +576,8 @@ def search():
     matching_objects = {}
     for row in cursor.fetchall():
         objects_json = row['detected_objects_json']
+        if not objects_json:
+            continue
         objects = json.loads(objects_json)
         
         for obj in objects:
@@ -603,9 +613,9 @@ def search():
         # Check if any tag matches the query
         if any(query.lower() in tag.lower() for tag in tags):
             canonical_path = row['canonical_path']
-            caption = row['generated_caption']
+            caption = row['generated_caption'] or row['fast_caption']
             objects_json = row['detected_objects_json']
-            objects = json.loads(objects_json)
+            objects = json.loads(objects_json) if objects_json else []
             
             # Get count of images in this group
             cursor.execute(
