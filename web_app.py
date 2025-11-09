@@ -76,7 +76,7 @@ def gallery():
     
     # Get all unique groups
     cursor.execute("""
-        SELECT group_id, canonical_path, generated_caption, detected_objects_json
+        SELECT group_id, canonical_path, generated_caption, fast_caption, detected_objects_json
         FROM image_groups
         ORDER BY group_id
     """)
@@ -85,9 +85,9 @@ def gallery():
     for row in cursor.fetchall():
         group_id = row['group_id']
         canonical_path = row['canonical_path']
-        caption = row['generated_caption']
+        caption = row['generated_caption'] or row['fast_caption']  # Fallback to fast caption if deep not done
         objects_json = row['detected_objects_json']
-        objects = json.loads(objects_json)
+        objects = json.loads(objects_json) if objects_json else []
         
         # Get count of images in this group
         cursor.execute(
