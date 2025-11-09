@@ -32,7 +32,7 @@ def get_group_categories():
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT group_id, canonical_path, generated_caption, fast_caption, detected_objects_json
+        SELECT group_id, canonical_path, generated_caption, detected_objects_json
         FROM image_groups
         ORDER BY generated_caption
     """)
@@ -46,12 +46,8 @@ def get_group_categories():
     for row in groups:
         group_id = row['group_id']
         canonical_path = row['canonical_path']
-        caption = row['generated_caption'] or row['fast_caption']  # V3: Fallback to fast caption
+        caption = row['generated_caption']
         objects_json = row['detected_objects_json']
-        
-        # Skip if no caption available
-        if not caption:
-            continue
         
         # Extract first 3-4 words as category
         words = caption.split()[:3]
@@ -356,7 +352,7 @@ def persons_index():
     
     # Get all persons
     cursor.execute("""
-        SELECT person_group_id, name, faiss_face_id
+        SELECT person_group_id, name, representative_faiss_id
         FROM person_groups
         ORDER BY person_group_id
     """)

@@ -155,7 +155,7 @@ class ImageProcessor:
         # Check if this is a known person
         if similarity_score > FACE_SIMILARITY_THRESHOLD:
             self.db.cursor.execute(
-                "SELECT person_group_id FROM person_groups WHERE faiss_face_id = ?",
+                "SELECT person_group_id FROM person_groups WHERE representative_faiss_id = ?",
                 (int(matched_faiss_id),)
             )
             result = self.db.cursor.fetchone()
@@ -172,7 +172,7 @@ class ImageProcessor:
         default_name = f"Person {new_faiss_id + 1}"
         
         self.db.cursor.execute(
-            "INSERT INTO person_groups (person_group_id, name, faiss_face_id) VALUES (?, ?, ?)",
+            "INSERT INTO person_groups (person_group_id, name, representative_faiss_id) VALUES (?, ?, ?)",
             (new_person_group_id, default_name, int(new_faiss_id))
         )
         self.db.db_conn.commit()
