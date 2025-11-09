@@ -1,8 +1,8 @@
 """
-Image processing pipeline with embedding extraction, object detection, and captioning (v2).
+Image processing pipeline with embedding extraction, object detection, and captioning (v3.2).
 Implements:
-- Solution 1: Face grouping and recognition
-- Solution 3: Tag extraction from captions
+- Solution 1: Face grouping and recognition (with OpenCV + face_appearances)
+- Solution 3: Tag extraction from captions (with Spacy)
 - Solution 4: Upgraded Qwen2-VL captioning
 - Caching logic to avoid redundant AI processing on duplicate images
 """
@@ -11,8 +11,16 @@ import torch
 import faiss
 import numpy as np
 import json
+import cv2
 from PIL import Image
 from typing import Dict, Optional, List
+
+try:
+    import spacy
+    SPACY_AVAILABLE = True
+except ImportError:
+    SPACY_AVAILABLE = False
+    print("Warning: Spacy not installed. Install with: pip install spacy && python -m spacy download en_core_web_sm")
 
 from config import (
     VISUAL_SIMILARITY_THRESHOLD,
@@ -26,17 +34,31 @@ from database import get_database
 
 class ImageProcessor:
     """
-    Handles the v2 image processing workflow:
+    Handles the v3.2 image processing workflow:
     1. Create embedding (fingerprint)
     2. Check for duplicates
     3. Run expensive AI pipeline only for unique images
-    4. Face grouping for persons
-    5. Tag extraction from captions
+    4. Face grouping for persons (with OpenCV)
+    5. Tag extraction from captions (with Spacy)
     """
     
     def __init__(self):
         self.models = get_models()
         self.db = get_database()
+        
+        # V3.2: Load OpenCV Haar Cascade for face detection
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        
+        # V3.2: Load Spacy model for better tag extraction
+        if SPACY_AVAILABLE:
+            try:
+                self.nlp = spacy.load("en_core_web_sm")
+            except:
+                print("Spacy model not found. Run: python -m spacy download en_core_web_sm")
+                self.nlp = None
+        else:
+            self.nlp = None
         
     @torch.no_grad()
     def get_embedding(self, image: Image.Image, model, processor) -> np.ndarray:
@@ -69,7 +91,7 @@ class ImageProcessor:
     def extract_tags_from_caption(self, caption: str) -> List[str]:
         """
         Solution 3: Extract searchable tags from caption using POS tagging.
-        Extracts nouns (NN, NNS) and proper nouns (NNP).
+        V3.2: Prefers Spacy for better accuracy, falls back to BERT.
         
         Args:
             caption: Generated caption text
@@ -79,19 +101,29 @@ class ImageProcessor:
         """
         tags_list = []
         
+        # V3.2: Try Spacy first (better quality)
+        if self.nlp:
+            try:
+                doc = self.nlp(caption)
+                for token in doc:
+                    if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 1:
+                        tags_list.append(token.text.lower())
+                tags_list = list(set(tags_list))
+                return tags_list
+            except Exception as e:
+                print(f"  > Spacy extraction failed: {e}, falling back to BERT")
+        
+        # Fallback to BERT POS tagger
         try:
-            # Use POS tagger to identify parts of speech
             pos_results = self.models.pos_tagger(caption)
             
-            # Extract nouns and proper nouns
             # The model outputs Universal Dependencies tags: 'NOUN', 'PROPN'
             for entity in pos_results:
                 if entity['entity'] in ['NOUN', 'PROPN']:
                     tag = entity['word'].replace("##", "").strip()
-                    if tag and len(tag) > 1:  # Filter out single characters
+                    if tag and len(tag) > 1:
                         tags_list.append(tag.lower())
                         
-            # Deduplicate
             tags_list = list(set(tags_list))
             
         except Exception as e:
