@@ -10,12 +10,12 @@ import os
 # CRITICAL: Use SigLIP-Giant for ALL embeddings (consistency fix)
 EMBEDDING_MODEL_ID = "google/siglip2-giant-opt-patch16-384"  # Upgraded from so400m
 DETECTION_MODEL_ID = "PekingU/rtdetr_r101vd"
-CAPTION_MODEL_ID = "Qwen/Qwen2-VL-7B-Instruct"  # Upgraded from BLIP2
+CAPTION_MODEL_ID = "Qwen/Qwen3-VL-8B-Thinking"  # Upgraded to Qwen3-VL (v3.3)
 TAGGER_MODEL_ID = "vblagoje/bert-english-uncased-finetuned-pos"  # For tag extraction
 
 # Model parameters
-# CRITICAL FIX: SigLIP-Giant has dimension 1536, not 1152!
-EMBEDDING_DIM = 1536  # Fixed dimension for SigLIP2-Giant embeddings (was 1152 for so400m)
+# CRITICAL FIX v3.3: SigLIP2-Giant vision embeddings are 1536-dim (text is 1152)
+EMBEDDING_DIM = 1536  # Correct dimension for SigLIP2-Giant VISION embeddings
 
 # Similarity thresholds (v2)
 VISUAL_SIMILARITY_THRESHOLD = 0.98  # For visual duplicate detection (very strict)

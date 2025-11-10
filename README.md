@@ -2,22 +2,29 @@
 
 An intelligent photo management system powered by state-of-the-art AI models for automatic photo classification, duplicate detection, and semantic organization.
 
-## Features
+## Features (v3.3)
 
-- **AI-Powered Classification**: Automatically generates descriptive captions for photos using BLIP2
-- **Object Detection**: Identifies objects in photos with RT-DETR
-- **Smart Duplicate Detection**: Uses SigLIP2 embeddings to find near-duplicate photos (burst shots, similar images)
-- **Semantic Search**: Vector-based similarity search using FAISS
+- **Cascade Architecture**: Two-tier processing for 5-10x faster ingestion
+- **AI-Powered Captioning**: Deep, detailed captions using Qwen3-VL-8B-Thinking
+- **Face Recognition**: Automatic face detection and grouping with OpenCV + SigLIP embeddings
+- **Object Detection**: Identifies objects in photos with RT-DETR (56.2 AP)
+- **Smart Duplicate Detection**: Dual deduplication (visual + semantic) using SigLIP2-Giant
+- **Tag Extraction**: Automatic searchable tags extracted from captions using spaCy
+- **EXIF Support**: Extracts timestamp and GPS coordinates
+- **Semantic Merge**: Groups similar photos even with different visual embeddings
 - **Web Interface**: Beautiful Flask-based UI for browsing and organizing photos
-- **Efficient Processing**: Caches AI results for duplicate photos to save processing time
+- **Efficient Processing**: Queues unique photos for deep processing, reuses AI results for duplicates
 
 ## Technology Stack
 
-### AI Models (State-of-the-Art)
+### AI Models (State-of-the-Art v3.3)
 
-- **SigLIP2** (`google/siglip2-so400m-patch14-384`): Multi-modal embeddings for image similarity
-- **RT-DETR** (`PekingU/rtdetr_r101vd`): Real-time object detection
-- **BLIP2** (`Salesforce/blip2-opt-2.7b`): Generative image captioning
+- **SigLIP2-Giant** (`google/siglip2-giant-opt-patch16-384`): Multi-modal embeddings (1152-dim)
+- **RT-DETR** (`PekingU/rtdetr_r101vd`): Real-time object detection (56.2 AP)
+- **Qwen3-VL** (`Qwen/Qwen3-VL-8B-Thinking`): Advanced vision-language model for captions
+- **BLIP2** (`Salesforce/blip2-opt-2.7b`): Fast captioning for tier-1 processing
+- **spaCy** (`en_core_web_sm`): Tag extraction from captions
+- **OpenCV Haar Cascade**: Face detection for person recognition
 
 ### Infrastructure
 
@@ -30,10 +37,12 @@ An intelligent photo management system powered by state-of-the-art AI models for
 
 ### Hardware
 
-- **GPU**: NVIDIA GPU with 16GB+ VRAM (recommended)
+- **GPU**: NVIDIA GPU with 24GB VRAM (recommended for deep processing)
+  - Tier 1 (Fast Ingest): 12GB VRAM
+  - Tier 2 (Deep Processing): 24GB VRAM
   - Alternatively: Apple Silicon (MPS) or CPU (slower)
 - **RAM**: 32GB+ recommended for large photo libraries
-- **Storage**: ~500MB for models, ~130MB for FAISS index (30K photos)
+- **Storage**: ~10GB for models, variable for FAISS indexes
 
 ### Software
 
@@ -67,41 +76,64 @@ An intelligent photo management system powered by state-of-the-art AI models for
 
 ## Usage
 
-### Step 1: Index Your Photos (V3 Fast Ingest)
+### Quick Start (v3.3 Unified Pipeline)
 
-Process all photos with the v3 cascade architecture (5-10x faster):
+The simplest way to process your photos is using the unified pipeline:
 
+```bash
+# Run the complete pipeline (ingest + deep processing + semantic merge)
+uv run run_pipeline.py
+```
+
+This single command will:
+1. **Fast Ingest**: Scan photos, extract EXIF, detect duplicates, queue unique photos
+2. **Deep Processing**: Generate captions, detect objects, recognize faces
+3. **Semantic Merge**: Consolidate similar groups
+
+### Advanced Usage
+
+Run individual stages:
+
+```bash
+# Only run fast ingest (visual + semantic deduplication)
+uv run run_pipeline.py --ingest-only
+
+# Only run deep processing on queued items
+uv run run_pipeline.py --process-only
+
+# Only run semantic merge
+uv run run_pipeline.py --merge-only
+
+# Run ingest + processing, skip merge
+uv run run_pipeline.py --no-merge
+```
+
+### Manual Stage-by-Stage Processing
+
+For more control, you can run each stage separately:
+
+**Stage 1: Fast Ingest**
 ```bash
 uv run index_photos.py
 ```
 
-**V3 Fast Ingest Workflow:**
-
-1. Scans the photos directory recursively for images
-2. For each photo:
-   - Extracts EXIF metadata (timestamp, GPS coordinates)
-   - Creates image embedding for visual deduplication
-   - Checks for visual duplicates (similarity > 0.98)
-   - If visually unique: Generates quick BLIP2 caption
-   - Creates caption embedding for semantic deduplication
-   - Checks for semantic duplicates (similarity > 0.95)
-   - If unique: Queues for deep AI processing
-3. Saves results to SQLite database and FAISS indexes
-
-**Expected Runtime (Fast Tier):**
-
-- **30,000 photos**: 1-2 hours (5-10x faster than v2)
-- **Processing speed**: ~5-10 images/second
-- **VRAM usage**: ~12GB (lightweight models)
-
-**For V2 Full Processing (Slower but Complete):**
-
-If you need immediate full processing without the queue:
+**Stage 2: Deep Processing**
 ```bash
-uv run index_photos_v2_backup.py
+uv run process_queue.py
 ```
 
-This runs the complete AI pipeline immediately (~1-2 img/s)
+**Stage 3: Semantic Merge (Optional)**
+```bash
+uv run run_maintenance.py
+```
+
+### Prerequisites
+
+Before running the pipeline, download the spaCy language model:
+
+```bash
+python -m spacy download en_core_web_sm
+```
 
 **Progress tracking:**
 

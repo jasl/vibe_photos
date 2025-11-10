@@ -47,10 +47,10 @@ FAST_CAPTION_MODEL_ID = "Salesforce/blip2-opt-2.7b"
 
 
 def get_inference_device_and_dtype():
-    """Auto-detect device and dtype."""
+    """Auto-detect device and dtype (v3.3: bfloat16 on CUDA for quality)."""
     if torch.cuda.is_available():
-        print("Using CUDA (NVIDIA GPU) - float16")
-        return torch.device("cuda"), torch.float16
+        print("Using CUDA (NVIDIA GPU) - bfloat16")
+        return torch.device("cuda"), torch.bfloat16
     if torch.backends.mps.is_available():
         print("Using MPS (Apple Silicon GPU) - float16")
         return torch.device("mps"), torch.float16
@@ -73,12 +73,12 @@ class FastIngestProcessor:
         """Load lightweight models for fast ingest."""
         print("\n=== Loading Tier-1 (Fast) Models ===")
         
-        # Model 1: SigLIP-so400m for embeddings
+        # Model 1: SigLIP2-Giant for embeddings (v3.3)
         print(f"\n[1/2] Loading Embedding Model: {EMBEDDING_MODEL_ID}")
         self.embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID, use_fast=True)
         self.embed_model = AutoModel.from_pretrained(
             EMBEDDING_MODEL_ID,
-            dtype="auto",
+            dtype=self.dtype,
             device_map="auto"
         ).eval()
         print("✓ Embedding model loaded")
@@ -88,7 +88,7 @@ class FastIngestProcessor:
         self.caption_processor = Blip2Processor.from_pretrained(FAST_CAPTION_MODEL_ID, use_fast=True)
         self.caption_model = Blip2ForConditionalGeneration.from_pretrained(
             FAST_CAPTION_MODEL_ID,
-            dtype="auto",
+            dtype=self.dtype,
             device_map="auto"
         ).eval()
         print("✓ Fast caption model loaded")
@@ -160,7 +160,10 @@ class FastIngestProcessor:
         ).to(self.device, self.dtype)
         
         image_features = self.embed_model.get_image_features(**inputs)
-        vector = image_features.cpu().numpy().astype(np.float32)
+        vector = image_features.cpu().float().numpy().astype(np.float32)
+        # Ensure 2D shape (1, dim) for FAISS
+        if vector.ndim == 1:
+            vector = vector.reshape(1, -1)
         faiss.normalize_L2(vector)
         return vector
         
@@ -175,7 +178,10 @@ class FastIngestProcessor:
         ).to(self.device, self.dtype)
         
         text_features = self.embed_model.get_text_features(**inputs)
-        vector = text_features.cpu().numpy().astype(np.float32)
+        vector = text_features.cpu().float().numpy().astype(np.float32)
+        # Ensure 2D shape (1, dim) for FAISS
+        if vector.ndim == 1:
+            vector = vector.reshape(1, -1)
         faiss.normalize_L2(vector)
         return vector
         

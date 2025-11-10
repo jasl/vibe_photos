@@ -20,13 +20,16 @@ from config import (
 from transformers import AutoProcessor, AutoModel
 
 
-def get_inference_device():
-    """Auto-detect device for inference."""
+def get_inference_device_and_dtype():
+    """Auto-detect device and dtype (v3.3: bfloat16 on CUDA for quality)."""
     if torch.cuda.is_available():
-        return torch.device("cuda")
+        print("Using CUDA (NVIDIA GPU) - bfloat16")
+        return torch.device("cuda"), torch.bfloat16
     if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
+        print("Using MPS (Apple Silicon GPU) - float16")
+        return torch.device("mps"), torch.float16
+    print("Using CPU - float32")
+    return torch.device("cpu"), torch.float32
 
 
 @torch.no_grad()
@@ -52,7 +55,10 @@ def get_text_embedding(text_list: list, processor, model, device) -> np.ndarray:
     
     text_features = model.get_text_features(**inputs)
     
-    vector = text_features.cpu().numpy().astype(np.float32)
+    vector = text_features.cpu().float().numpy().astype(np.float32)
+    # Ensure 2D shape (batch_size, dim) for FAISS
+    if vector.ndim == 1:
+        vector = vector.reshape(1, -1)
     faiss.normalize_L2(vector)
     return vector
 
@@ -128,14 +134,14 @@ def run_semantic_merge_task():
     print(f"\nFound {len(captions)} unique image groups with valid captions")
     print(f"Creating text embeddings for all captions...")
     
-    # Load embedding model
-    device = get_inference_device()
+    # Load embedding model (v3.3: use correct dtype)
+    device, dtype = get_inference_device_and_dtype()
     print(f"Loading Embedding Model: {EMBEDDING_MODEL_ID}")
     
     embed_processor = AutoProcessor.from_pretrained(EMBEDDING_MODEL_ID)
     embed_model = AutoModel.from_pretrained(
         EMBEDDING_MODEL_ID,
-        dtype="auto",
+        dtype=dtype,
         device_map="auto"
     ).eval()
     
