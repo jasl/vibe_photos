@@ -19,7 +19,7 @@ An intelligent photo management system powered by state-of-the-art AI models for
 
 ### AI Models (State-of-the-Art v3.3)
 
-- **SigLIP2-Giant** (`google/siglip2-giant-opt-patch16-384`): Multi-modal embeddings (1152-dim)
+- **SigLIP2-Giant** (`google/siglip2-giant-opt-patch16-384`): Multi-modal embeddings (1536-dim)
 - **RT-DETR** (`PekingU/rtdetr_r101vd`): Real-time object detection (56.2 AP)
 - **Qwen3-VL** (`Qwen/Qwen3-VL-8B-Thinking`): Advanced vision-language model for captions
 - **BLIP2** (`Salesforce/blip2-opt-2.7b`): Fast captioning for tier-1 processing

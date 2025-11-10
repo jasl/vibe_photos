@@ -3,9 +3,11 @@
 ## ✅ What Was Changed
 
 ### 1. Critical Fixes
-- **Fixed EMBEDDING_DIM**: 1536 → **1152** (correct for SigLIP2-Giant)
+- **Verified EMBEDDING_DIM**: **1536** (correct for SigLIP2-Giant vision features)
 - **Fixed dtype**: float16 → **bfloat16** on CUDA for better quality
 - **Upgraded caption model**: Qwen2-VL-7B → **Qwen3-VL-8B-Thinking**
+- **Fixed model loading**: Changed deprecated torch_dtype to dtype parameter
+- **Fixed Qwen3-VL loading**: Use Qwen3VLForConditionalGeneration class
 
 ### 2. Data Cleanup
 - Deleted old FAISS indexes with wrong dimensions:
@@ -18,7 +20,7 @@
 ### 3. Updated Scripts
 
 #### `config.py`
-- EMBEDDING_DIM = 1152
+- EMBEDDING_DIM = 1536 (verified: vision features are 1536-dim)
 - CAPTION_MODEL_ID = "Qwen/Qwen3-VL-8B-Thinking"
 
 #### `index_photos.py` (Fast Ingest)
